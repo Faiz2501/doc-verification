@@ -1,4 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -23,9 +26,7 @@ export class SupportService {
     });
   }
 
-  async getUserTickets(
-    userId: string,
-  ) {
+  async getUserTickets(userId: string) {
     return this.prisma.supportTicket.findMany({
       where: {
         userId,
@@ -44,16 +45,96 @@ export class SupportService {
     });
   }
 
+  async getTicketById(ticketId: string) {
+    const ticket =
+      await this.prisma.supportTicket.findUnique({
+        where: {
+          id: ticketId,
+        },
+      });
+
+    if (!ticket) {
+      throw new NotFoundException(
+        'Support ticket not found',
+      );
+    }
+
+    return ticket;
+  }
+
   async updateStatus(
     ticketId: string,
     status: string,
   ) {
+    const ticket =
+      await this.prisma.supportTicket.findUnique({
+        where: {
+          id: ticketId,
+        },
+      });
+
+    if (!ticket) {
+      throw new NotFoundException(
+        'Support ticket not found',
+      );
+    }
+
     return this.prisma.supportTicket.update({
       where: {
         id: ticketId,
       },
       data: {
         status,
+      },
+    });
+  }
+
+  async replyToTicket(
+    ticketId: string,
+    reply: string,
+    status = 'RESOLVED',
+  ) {
+    const ticket =
+      await this.prisma.supportTicket.findUnique({
+        where: {
+          id: ticketId,
+        },
+      });
+
+    if (!ticket) {
+      throw new NotFoundException(
+        'Support ticket not found',
+      );
+    }
+
+    return this.prisma.supportTicket.update({
+      where: {
+        id: ticketId,
+      },
+      data: {
+        reply,
+        status,
+      },
+    });
+  }
+
+  async deleteTicket(ticketId: string) {
+    const ticket =
+      await this.prisma.supportTicket.findUnique({
+        where: {
+          id: ticketId,
+        },
+      });
+
+    if (!ticket) {
+      throw new NotFoundException(
+        'Support ticket not found',
+      );
+    }
+
+    return this.prisma.supportTicket.delete({
+      where: {
+        id: ticketId,
       },
     });
   }

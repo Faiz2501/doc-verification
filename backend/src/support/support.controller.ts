@@ -3,6 +3,7 @@ import {
   Post,
   Get,
   Patch,
+  Delete,
   Param,
   Body,
   UseGuards,
@@ -16,8 +17,7 @@ import { PermissionGuard } from '../common/guards/permission.guard';
 @Controller('support')
 export class SupportController {
   constructor(
-    private readonly supportService:
-      SupportService,
+    private readonly supportService: SupportService,
   ) {}
 
   @Post('create')
@@ -53,6 +53,18 @@ export class SupportController {
 
   @UseGuards(PermissionGuard)
   @Permission('VIEW_SUPPORT')
+  @Get(':ticketId')
+  getTicket(
+    @Param('ticketId')
+    ticketId: string,
+  ) {
+    return this.supportService.getTicketById(
+      ticketId,
+    );
+  }
+
+  @UseGuards(PermissionGuard)
+  @Permission('VIEW_SUPPORT')
   @Patch(':ticketId/status')
   updateStatus(
     @Param('ticketId')
@@ -66,6 +78,38 @@ export class SupportController {
     return this.supportService.updateStatus(
       ticketId,
       body.status,
+    );
+  }
+
+  @UseGuards(PermissionGuard)
+  @Permission('VIEW_SUPPORT')
+  @Patch(':ticketId/reply')
+  replyTicket(
+    @Param('ticketId')
+    ticketId: string,
+
+    @Body()
+    body: {
+      reply: string;
+      status?: string;
+    },
+  ) {
+    return this.supportService.replyToTicket(
+      ticketId,
+      body.reply,
+      body.status || 'RESOLVED',
+    );
+  }
+
+  @UseGuards(PermissionGuard)
+  @Permission('VIEW_SUPPORT')
+  @Delete(':ticketId')
+  deleteTicket(
+    @Param('ticketId')
+    ticketId: string,
+  ) {
+    return this.supportService.deleteTicket(
+      ticketId,
     );
   }
 }
