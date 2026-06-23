@@ -1,6 +1,7 @@
 import {
   Injectable,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
@@ -71,5 +72,76 @@ export class UsersService {
         createdAt: true,
       },
     });
+  }
+
+  // GET ALL USERS
+  async getAllUsers() {
+    return this.prisma.user.findMany({
+      orderBy: {
+        createdAt: 'desc',
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+        createdAt: true,
+        wallet: {
+          select: {
+            balance: true,
+          },
+        },
+      },
+    });
+  }
+
+  // GET USER BY ID
+  async getUserById(id: string) {
+    const user =
+      await this.prisma.user.findUnique({
+        where: {
+          id,
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true,
+
+          wallet: {
+            select: {
+              balance: true,
+            },
+          },
+
+          apiKeys: {
+            select: {
+              id: true,
+              name: true,
+              isActive: true,
+              createdAt: true,
+            },
+          },
+
+          verifications: {
+            take: 10,
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
+        },
+      });
+
+    if (!user) {
+      throw new NotFoundException(
+        'User not found',
+      );
+    }
+
+    return user;
   }
 }

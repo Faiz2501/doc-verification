@@ -5,6 +5,7 @@ import {
   Body,
   Request,
   UseGuards,
+  Param,
 } from '@nestjs/common';
 
 import { UsersService } from './users.service';
@@ -39,5 +40,19 @@ export class UsersController {
       req.user.sub,
       body,
     );
+  }
+
+  // ADMIN - GET ALL USERS
+  @Get()
+  getAllUsers() {
+    return this.usersService.getAllUsers();
+  }
+
+  // ADMIN - GET USER BY ID
+  @Get(':id')
+  getUserById(
+    @Param('id') id: string,
+  ) {
+    return this.usersService.getUserById(id);
   }
 }
