@@ -1,4 +1,10 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Post,
+  Get,
+} from '@nestjs/common';
+
 import { AuthService } from './auth.service';
 
 import { RegisterDto } from './dto/register.dto';
@@ -6,15 +12,40 @@ import { LoginDto } from './dto/login.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(
+    private authService: AuthService,
+  ) {}
+
+  @Get('test')
+  test() {
+    return {
+      message: 'AUTH WORKING',
+    };
+  }
 
   @Post('register')
-  register(@Body() dto: RegisterDto) {
+  register(
+    @Body() dto: RegisterDto,
+  ) {
     return this.authService.register(dto);
   }
 
   @Post('login')
-  login(@Body() dto: LoginDto) {
+  login(
+    @Body() dto: LoginDto,
+  ) {
     return this.authService.login(dto);
+  }
+
+  @Post('refresh')
+  refresh(
+    @Body()
+    body: {
+      refresh_token: string;
+    },
+  ) {
+    return this.authService.refreshToken(
+      body.refresh_token,
+    );
   }
 }

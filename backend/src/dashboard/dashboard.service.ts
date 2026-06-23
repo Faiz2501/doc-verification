@@ -85,6 +85,94 @@ export class DashboardService {
         },
       });
 
+    const now = new Date();
+
+    const startOfToday = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      now.getDate(),
+    );
+
+    const startOfMonth = new Date(
+      now.getFullYear(),
+      now.getMonth(),
+      1,
+    );
+
+    const apiCallsToday =
+      await this.prisma.verificationRequest.count({
+        where: {
+          userId,
+          createdAt: {
+            gte: startOfToday,
+          },
+        },
+      });
+
+    const apiCallsThisMonth =
+      await this.prisma.verificationRequest.count({
+        where: {
+          userId,
+          createdAt: {
+            gte: startOfMonth,
+          },
+        },
+      });
+
+    const todaySpendData =
+      await this.prisma.verificationRequest.aggregate({
+        where: {
+          userId,
+          createdAt: {
+            gte: startOfToday,
+          },
+        },
+        _sum: {
+          amount: true,
+        },
+      });
+
+    const monthlySpendData =
+      await this.prisma.verificationRequest.aggregate({
+        where: {
+          userId,
+          createdAt: {
+            gte: startOfMonth,
+          },
+        },
+        _sum: {
+          amount: true,
+        },
+      });
+
+    const todaySpend =
+      todaySpendData._sum.amount || 0;
+
+    const monthlySpend =
+      monthlySpendData._sum.amount || 0;
+
+    const daysElapsed =
+      now.getDate();
+
+    const averageDailySpend =
+      daysElapsed > 0
+        ? Number(
+            (
+              monthlySpend /
+              daysElapsed
+            ).toFixed(2),
+          )
+        : 0;
+
+    const successRate =
+      totalRequests === 0
+        ? '0%'
+        : (
+            (successfulRequests /
+              totalRequests) *
+            100
+          ).toFixed(2) + '%';
+
     return {
       walletBalance:
         wallet?.balance || 0,
@@ -98,6 +186,8 @@ export class DashboardService {
 
       failedRequests,
 
+      successRate,
+
       totalSpent:
         spent._sum.amount || 0,
 
@@ -105,6 +195,16 @@ export class DashboardService {
         totalRequests,
 
       totalTransactions,
+
+      apiCallsToday,
+
+      apiCallsThisMonth,
+
+      todaySpend,
+
+      monthlySpend,
+
+      averageDailySpend,
 
       recentVerifications,
     };
