@@ -2,7 +2,9 @@ import {
   Controller,
   Post,
   Get,
+  Patch,
   Param,
+  Body,
 } from '@nestjs/common';
 
 import { ApiKeysService } from './api-keys.service';
@@ -17,9 +19,15 @@ export class ApiKeysController {
   generateKey(
     @Param('userId')
     userId: string,
+
+    @Body()
+    body: {
+      name: string;
+    },
   ) {
     return this.apiKeysService.generateApiKey(
       userId,
+      body.name,
     );
   }
 
@@ -27,8 +35,34 @@ export class ApiKeysController {
   regenerateKey(
     @Param('userId')
     userId: string,
+
+    @Body()
+    body: {
+      name: string;
+    },
   ) {
     return this.apiKeysService.regenerateApiKey(
+      userId,
+      body.name,
+    );
+  }
+
+  @Patch('deactivate/:id')
+  deactivateKey(
+    @Param('id')
+    id: string,
+  ) {
+    return this.apiKeysService.deactivateApiKey(
+      id,
+    );
+  }
+
+  @Get('analytics/:userId')
+  analytics(
+    @Param('userId')
+    userId: string,
+  ) {
+    return this.apiKeysService.getUsageAnalytics(
       userId,
     );
   }

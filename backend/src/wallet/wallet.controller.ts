@@ -23,6 +23,15 @@ export class WalletController {
     );
   }
 
+  @Get('summary/:userId')
+  getWalletSummary(
+    @Param('userId') userId: string,
+  ) {
+    return this.walletService.getWalletSummary(
+      userId,
+    );
+  }
+
   @Post('credit')
   creditWallet(
     @Body()

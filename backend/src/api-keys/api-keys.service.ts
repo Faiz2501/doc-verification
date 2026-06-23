@@ -1,7 +1,5 @@
 import { Injectable } from '@nestjs/common';
-
 import { PrismaService } from '../prisma/prisma.service';
-
 import { randomUUID } from 'crypto';
 
 @Injectable()
@@ -10,20 +8,10 @@ export class ApiKeysService {
     private prisma: PrismaService,
   ) {}
 
-  async generateApiKey(userId: string) {
-    const apiKey =
-      'sk_' +
-      randomUUID().replace(/-/g, '');
-
-    return this.prisma.apiKey.create({
-      data: {
-        userId,
-        apiKey,
-      },
-    });
-  }
-
-  async regenerateApiKey(userId: string) {
+  async generateApiKey(
+    userId: string,
+    name: string,
+  ) {
     await this.prisma.apiKey.updateMany({
       where: {
         userId,
@@ -41,8 +29,48 @@ export class ApiKeysService {
     return this.prisma.apiKey.create({
       data: {
         userId,
+        name,
         apiKey,
         isActive: true,
+      },
+    });
+  }
+
+  async regenerateApiKey(
+    userId: string,
+    name: string,
+  ) {
+    await this.prisma.apiKey.updateMany({
+      where: {
+        userId,
+        isActive: true,
+      },
+      data: {
+        isActive: false,
+      },
+    });
+
+    const apiKey =
+      'sk_' +
+      randomUUID().replace(/-/g, '');
+
+    return this.prisma.apiKey.create({
+      data: {
+        userId,
+        name,
+        apiKey,
+        isActive: true,
+      },
+    });
+  }
+
+  async deactivateApiKey(id: string) {
+    return this.prisma.apiKey.update({
+      where: {
+        id,
+      },
+      data: {
+        isActive: false,
       },
     });
   }
@@ -75,6 +103,60 @@ export class ApiKeysService {
         createdAt: 'desc',
       },
     });
+  }
+
+  async getUsageAnalytics(userId: string) {
+    const requests =
+      await this.prisma.verificationRequest.findMany({
+        where: {
+          userId,
+        },
+      });
+
+    const totalRequests =
+      requests.length;
+
+    const successfulRequests =
+      requests.filter(
+        (r) => r.status === 'SUCCESS',
+      ).length;
+
+    const failedRequests =
+      requests.filter(
+        (r) => r.status === 'FAILED',
+      ).length;
+
+    const totalSpent =
+      requests.reduce(
+        (sum, r) => sum + r.amount,
+        0,
+      );
+
+    const servicesUsed: Record<
+      string,
+      number
+    > = {};
+
+    requests.forEach((r) => {
+      servicesUsed[r.serviceName] =
+        (servicesUsed[r.serviceName] || 0) + 1;
+    });
+
+    return {
+      totalRequests,
+      successfulRequests,
+      failedRequests,
+      totalSpent,
+      successRate:
+        totalRequests === 0
+          ? '0%'
+          : (
+              (successfulRequests /
+                totalRequests) *
+              100
+            ).toFixed(2) + '%',
+      servicesUsed,
+    };
   }
 
   async validateApiKey(apiKey: string) {

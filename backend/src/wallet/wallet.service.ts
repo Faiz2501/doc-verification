@@ -37,8 +37,7 @@ export class WalletService {
     amount: number,
     description = 'Wallet Credit',
   ) {
-    const wallet =
-      await this.getWallet(userId);
+    await this.getWallet(userId);
 
     const updatedWallet =
       await this.prisma.wallet.update({
@@ -111,5 +110,69 @@ export class WalletService {
         createdAt: 'desc',
       },
     });
+  }
+
+  async getWalletSummary(userId: string) {
+    const wallet =
+      await this.getWallet(userId);
+
+    const credits =
+      await this.prisma.walletTransaction.aggregate({
+        where: {
+          userId,
+          type: 'CREDIT',
+        },
+        _sum: {
+          amount: true,
+        },
+        _count: true,
+      });
+
+    const debits =
+      await this.prisma.walletTransaction.aggregate({
+        where: {
+          userId,
+          type: 'DEBIT',
+        },
+        _sum: {
+          amount: true,
+        },
+        _count: true,
+      });
+
+    const latestRecharge =
+      await this.prisma.walletTransaction.findFirst({
+        where: {
+          userId,
+          type: 'CREDIT',
+        },
+        orderBy: {
+          createdAt: 'desc',
+        },
+      });
+
+    return {
+      balance: wallet.balance,
+
+      totalCredits:
+        credits._sum.amount || 0,
+
+      totalDebits:
+        debits._sum.amount || 0,
+
+      creditTransactions:
+        credits._count,
+
+      debitTransactions:
+        debits._count,
+
+      totalTransactions:
+        credits._count + debits._count,
+
+      totalRechargeAmount:
+        credits._sum.amount || 0,
+
+      latestRecharge,
+    };
   }
 }
