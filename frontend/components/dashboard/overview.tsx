@@ -25,21 +25,35 @@ type MeUser = {
 };
 
 type DashboardData = {
-  wallet: {
+  wallet?: {
     id: string;
     userId: string;
     balance: number;
     createdAt?: string;
     updatedAt?: string;
   } | null;
-  apiKeys: Array<{
+  walletBalance?: number;
+  activeApiKey?: string | null;
+  apiKeys?: Array<{
     id: string;
     apiKey: string;
     isActive: boolean;
     createdAt: string;
   }>;
-  totalVerifications: number;
-  totalTransactions: number;
+  totalRequests?: number;
+  successfulRequests?: number;
+  failedRequests?: number;
+  totalSpent?: number;
+  totalVerifications?: number;
+  totalTransactions?: number;
+  recentVerifications?: Array<{
+    id: string;
+    serviceName: string;
+    amount: number;
+    status: string;
+    createdAt: string;
+    errorMessage?: string | null;
+  }>;
 };
 
 type HistoryRow = {
@@ -144,19 +158,26 @@ export default function Overview() {
         count,
       }));
 
-    const recentRows: {
-  timestamp: string;
-  service: string;
-  requestId: string;
-  status: "Success" | "Failed";
-  latency: string;
-}[] = history.slice(0, 3).map((item) => ({
-  timestamp: formatTimestamp(item.createdAt),
-  service: prettyServiceName(item.serviceName),
-  requestId: item.id.slice(0, 8),
-  status: item.status === "SUCCESS" ? "Success" : "Failed",
-  latency: "—",
-}));
+    const recentRows = history.slice(0, 3).map((item) => ({
+      timestamp: formatTimestamp(item.createdAt),
+      service: prettyServiceName(item.serviceName),
+      requestId: item.id.slice(0, 8),
+      status: (item.status === "SUCCESS" ? "Success" : "Failed") as
+        | "Success"
+        | "Failed",
+      latency: "—",
+    }));
+
+    const usageMap = new Map<string, number>();
+    history.forEach((item) => {
+      const d = new Date(item.createdAt);
+      const key = `${d.getMonth() + 1}/${d.getDate()}`;
+      usageMap.set(key, (usageMap.get(key) || 0) + 1);
+    });
+
+    const usageData = Array.from(usageMap.entries())
+      .slice(-7)
+      .map(([label, count]) => ({ label, count }));
 
     return {
       total,
@@ -167,8 +188,31 @@ export default function Overview() {
       successRate,
       topServices,
       recentRows,
+      usageData,
     };
   }, [history]);
+
+  const walletBalance =
+    dashboard?.walletBalance ??
+    dashboard?.wallet?.balance ??
+    0;
+
+  const activeApiKey =
+    dashboard?.activeApiKey ??
+    dashboard?.apiKeys?.find((k) => k.isActive)?.apiKey ??
+    null;
+
+  const totalRequests =
+    dashboard?.totalRequests ?? summary.total;
+
+  const successfulRequests =
+    dashboard?.successfulRequests ?? summary.success;
+
+  const failedRequests =
+    dashboard?.failedRequests ?? summary.failed;
+
+  const totalSpent =
+    dashboard?.totalSpent ?? 0;
 
   return (
     <section className="space-y-10">
@@ -213,15 +257,15 @@ export default function Overview() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-4 xl:grid-cols-12 mb-10">
-            <div className="col-span-1 xl:col-span-6">
+          <div className="grid grid-cols-1 gap-4 xl:grid-cols-12 mb-10">
+            <div className="col-span-1.5 xl:col-span-6">
               <MetricCard
                 title="Wallet Balance"
-                value={formatMoney(dashboard?.wallet?.balance ?? 0)}
+                value={formatMoney(walletBalance)}
                 subtitle={
-                  dashboard?.wallet
-                    ? `Wallet ID: ${dashboard.wallet.id}`
-                    : "Wallet will be created automatically"
+                  activeApiKey
+                    ? `Active key: ${activeApiKey.slice(0, 12)}…`
+                    : "No active key"
                 }
                 icon={Wallet}
                 large
@@ -232,7 +276,7 @@ export default function Overview() {
               <MetricCard
                 title="Success Rate"
                 value={`${summary.successRate}%`}
-                subtitle={`${summary.success} successful requests`}
+                subtitle={`${successfulRequests} successful requests`}
                 icon={CheckCircle}
               />
             </div>
@@ -240,28 +284,28 @@ export default function Overview() {
             <div className="col-span-1 sm:col-span-2 xl:col-span-3">
               <MetricCard
                 title="Failed Requests"
-                value={String(summary.failed)}
+                value={String(failedRequests)}
                 subtitle="Requires attention"
                 icon={AlertCircle}
                 danger
               />
             </div>
 
-            <div className="col-span-1 sm:col-span-2 xl:col-span-6">
+            <div className="col-span-1 xl:col-span-6">
               <MetricCard
                 title="API Calls Today"
                 value={String(summary.today)}
-                subtitle="Requests processed today"
+                subtitle={`${totalRequests} total requests`}
                 progress={Math.min(100, summary.today ? 100 : 0)}
                 icon={Activity}
               />
             </div>
 
-            <div className="col-span-1 sm:col-span-2 xl:col-span-6">
+            <div className="col-span-1 xl:col-span-6">
               <MetricCard
                 title="API Calls This Month"
                 value={String(summary.thisMonth)}
-                subtitle="Requests processed this month"
+                subtitle={`Spent ${formatMoney(totalSpent)}`}
                 progress={Math.min(100, summary.thisMonth ? 100 : 0)}
                 icon={Calendar}
               />
@@ -269,8 +313,14 @@ export default function Overview() {
           </div>
 
           <div className="grid grid-cols-2 gap-4 mt-6">
-            <UsageChart />
-            <ServiceChart />
+            <UsageChart data={summary.usageData} />
+            <ServiceChart rows={summary.topServices.map(item => ({
+              id: item.serviceName,
+              serviceName: item.serviceName,
+              amount: item.count,
+              status: "SUCCESS" as const,
+              createdAt: new Date().toISOString(),
+            }))} />
           </div>
 
           <div className="mt-6">

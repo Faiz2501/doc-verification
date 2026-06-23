@@ -1,188 +1,347 @@
 "use client";
 
 import { createPortal } from "react-dom";
-import { useState } from "react";
-import { X, ShieldCheck } from "lucide-react";
+import { useEffect, useState } from "react";
+import { X, CheckCircle2 } from "lucide-react";
+import api from "@/lib/api/axios";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   serviceName: string;
+  mode: "single" | "driving-license" | "bank" | "pan-udyam" | "coming-soon";
+  endpoint?: string;
+  requestKey?: string;
+  inputLabel?: string;
+  placeholder?: string;
+  defaultApiKey?: string;
 };
 
 export default function VerifyModal({
   open,
   onClose,
   serviceName,
+  mode,
+  endpoint,
+  requestKey,
+  inputLabel,
+  placeholder,
+  defaultApiKey = "",
 }: Props) {
-  const [value, setValue] = useState("");
+  const [apiKey, setApiKey] = useState(defaultApiKey);
+  const [singleValue, setSingleValue] = useState("");
+
+  const [dlNumber, setDlNumber] = useState("");
+  const [dobDay, setDobDay] = useState("");
+  const [dobMonth, setDobMonth] = useState("");
+  const [dobYear, setDobYear] = useState("");
+
+  const [bankAccount, setBankAccount] = useState("");
+  const [ifscCode, setIfscCode] = useState("");
+
+  const [panValue, setPanValue] = useState("");
+
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState("");
   const [result, setResult] = useState<any>(null);
+
+  useEffect(() => {
+    if (open) {
+      setApiKey(defaultApiKey || "");
+      setSingleValue("");
+      setDlNumber("");
+      setDobDay("");
+      setDobMonth("");
+      setDobYear("");
+      setBankAccount("");
+      setIfscCode("");
+      setPanValue("");
+      setError("");
+      setResult(null);
+    }
+  }, [open, defaultApiKey]);
 
   if (!open) return null;
 
-  const handleVerify = () => {
-    if (serviceName === "Aadhaar OTP" && value === "6124551204520045") {
-      setResult({
-        name: "Rahul Sharma",
-        gender: "Male",
-        dob: "14 Jan 1998",
-        state: "West Bengal",
-        aadhaar: "XXXX XXXX 0045",
-        status: "Verified",
-      });
-      return;
+  const buildPayload = () => {
+    if (mode === "single") {
+      return { [requestKey || "value"]: singleValue.trim() };
     }
 
-    alert("Backend Integration Pending");
+    if (mode === "driving-license") {
+      return {
+        drivingLicenseNumber: dlNumber.trim(),
+        dateOfBirth: `${dobYear}-${dobMonth.padStart(2, "0")}-${dobDay.padStart(2, "0")}`,
+      };
+    }
+
+    if (mode === "bank") {
+      return {
+        accountNumber: bankAccount.trim(),
+        ifscCode: ifscCode.trim(),
+      };
+    }
+
+    if (mode === "pan-udyam") {
+      return { panNumber: panValue.trim() };
+    }
+
+    return {};
+  };
+
+  const handleSubmit = async () => {
+    try {
+      setLoading(true);
+      setError("");
+      setResult(null);
+
+      if (!endpoint) {
+        setError("This service is not wired to a backend endpoint yet.");
+        return;
+      }
+
+      if (!apiKey.trim()) {
+        setError("Please enter your API key.");
+        return;
+      }
+
+      const payload = buildPayload();
+
+      const response = await api.request({
+        method: "post",
+        url: endpoint,
+        data: payload,
+        headers:
+          payload instanceof FormData
+            ? {
+                "x-api-key": apiKey.trim(),
+              }
+            : {
+                "x-api-key": apiKey.trim(),
+              },
+      });
+
+      setResult(response.data);
+    } catch (err: any) {
+      console.error(err);
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Verification failed."
+      );
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const renderBody = () => {
+    if (mode === "single") {
+      return (
+        <div className="space-y-5">
+          <div>
+            <label className="mb-2 block text-sm text-slate-300">
+              {inputLabel || "Input"}
+            </label>
+            <input
+              value={singleValue}
+              onChange={(e) => setSingleValue(e.target.value)}
+              placeholder={placeholder || "Enter value"}
+              className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    if (mode === "driving-license") {
+      return (
+        <div className="space-y-5">
+          <div>
+            <label className="mb-2 block text-sm text-slate-300">
+              Driving License Number
+            </label>
+            <input
+              value={dlNumber}
+              onChange={(e) => setDlNumber(e.target.value)}
+              placeholder="MP982022000098"
+              className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm text-slate-300">
+              Date of Birth
+            </label>
+            <div className="grid grid-cols-3 gap-3">
+              <input
+                value={dobDay}
+                onChange={(e) => setDobDay(e.target.value)}
+                placeholder="DD"
+                maxLength={2}
+                className="rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
+              />
+              <input
+                value={dobMonth}
+                onChange={(e) => setDobMonth(e.target.value)}
+                placeholder="MM"
+                maxLength={2}
+                className="rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
+              />
+              <input
+                value={dobYear}
+                onChange={(e) => setDobYear(e.target.value)}
+                placeholder="YYYY"
+                maxLength={4}
+                className="rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
+              />
+            </div>
+          </div>
+
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+            ₹2.5 will be deducted from your available balance for this Driving License verification.
+          </div>
+        </div>
+      );
+    }
+
+    if (mode === "bank") {
+      return (
+        <div className="space-y-5">
+          <div>
+            <label className="mb-2 block text-sm text-slate-300">
+              Bank Account Number
+            </label>
+            <input
+              value={bankAccount}
+              onChange={(e) => setBankAccount(e.target.value)}
+              placeholder="Enter Bank Account Number"
+              className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm text-slate-300">
+              IFSC Code
+            </label>
+            <input
+              value={ifscCode}
+              onChange={(e) => setIfscCode(e.target.value.toUpperCase())}
+              placeholder="XXX0XXXXXX"
+              className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
+            />
+          </div>
+
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+            ₹2 will be deducted from your available balance for this Bank Verification.
+          </div>
+        </div>
+      );
+    }
+
+    if (mode === "pan-udyam") {
+      return (
+        <div className="space-y-5">
+          <div>
+            <label className="mb-2 block text-sm text-slate-300">
+              PAN Number (For UDYAM Lookup)
+            </label>
+            <input
+              value={panValue}
+              onChange={(e) => setPanValue(e.target.value.toUpperCase())}
+              placeholder="ABCDE1234F"
+              className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
+            />
+          </div>
+
+          <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
+            ₹3 will be deducted for PAN → UDYAM verification.
+          </div>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   return createPortal(
-    <div
-  className="
-  fixed
-  inset-0
-  z-[9999]
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-md">
+      <div className="w-[880px] rounded-xl border border-[#273647] bg-[#0D1C2D] p-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-semibold text-white">{serviceName}</h2>
+            <p className="mt-1 text-slate-400">
+              {endpoint || "Fill the form below and send it to the backend."}
+            </p>
+          </div>
 
-  flex
-  items-center
-  justify-center
-
-  bg-black/70
-  backdrop-blur-md
-  "
->
-      <div
-        className="
-          rounded-xl
-          border
-          border-[#273647]
-          bg-[#0D1C2D]
-          p-6
-        "
-      >
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl font-semibold">
-            {serviceName}
-          </h2>
-
-          <button
-            onClick={onClose}
-          >
+          <button onClick={onClose}>
             <X />
           </button>
         </div>
 
-        {!result ? (
-          <>
-            <p className="mt-4 text-slate-400">
-              Enter details to
-              verify.
-            </p>
+        <div className="mt-6">
+          <label className="mb-2 block text-sm text-slate-300">API Key</label>
+          <input
+            value={apiKey}
+            onChange={(e) => setApiKey(e.target.value)}
+            placeholder="sk_live_xxx"
+            className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
+          />
+        </div>
 
-            <input
-              value={value}
-              onChange={(e) =>
-                setValue(
-                  e.target.value
-                )
-              }
-              placeholder={
-                serviceName ===
-                "Aadhaar OTP"
-                  ? "Aadhaar Number"
-                  : "Input"
-              }
-              className="
-              mt-6
-              w-full
+        <div className="mt-6">{renderBody()}</div>
 
-              rounded-xl
+        {error && (
+          <div className="mt-5 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-300">
+            {error}
+          </div>
+        )}
 
-              border
-              border-[#273647]
-
-              bg-[#122131]
-
-              p-4
-              "
-            />
-
-            <div className="mt-8 flex justify-end gap-3">
-              <button
-                onClick={onClose}
-                className="
-                  rounded-xl
-                  border
-                  border-[#273647]
-                  px-5
-                  py-3
-                  transition-all
-                  hover:border-red-500
-                  hover:bg-red-500/10
-                  hover:text-red-400
-                "
-              >
-                Cancel
-              </button>
-
-              <button
-                onClick={
-                  handleVerify
-                }
-                className="
-                rounded-xl
-
-                bg-blue-600
-
-                px-5
-                py-3
-                "
-              >
-                Verify
-              </button>
-            </div>
-          </>
-        ) : (
-          <div className="mt-8">
-            <div className="flex items-center gap-3 text-emerald-400">
-              <ShieldCheck />
+        {result && (
+          <div className="mt-5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
+            <div className="flex items-center gap-2 text-emerald-400">
+              <CheckCircle2 size={18} />
               <span>Verification Successful</span>
             </div>
+            <pre className="mt-4 overflow-auto rounded-xl bg-black/30 p-4 text-xs text-white">
+              {JSON.stringify(result, null, 2)}
+            </pre>
+          </div>
+        )}
 
-            <div className="mt-6 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-5">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-slate-400 text-sm">Full Name</p>
-                  <p className="mt-1">{result.name}</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 text-sm">Gender</p>
-                  <p className="mt-1">{result.gender}</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 text-sm">Date of Birth</p>
-                  <p className="mt-1">{result.dob}</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 text-sm">State</p>
-                  <p className="mt-1">{result.state}</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 text-sm">Aadhaar</p>
-                  <p className="mt-1">{result.aadhaar}</p>
-                </div>
-                <div>
-                  <p className="text-slate-400 text-sm">Status</p>
-                  <p className="mt-1 text-emerald-400">{result.status}</p>
-                </div>
-              </div>
-            </div>
+        {mode !== "pan-udyam" && (
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="rounded-xl border border-[#273647] px-5 py-3 text-white"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="rounded-xl bg-blue-600 px-5 py-3 text-white disabled:opacity-60"
+            >
+              {loading ? "Verifying..." : "Verify"}
+            </button>
+          </div>
+        )}
 
-            <div className="mt-6 flex justify-end">
-              <button onClick={() => { setResult(null); onClose(); }} className="rounded-xl bg-blue-600 px-5 py-3">
-                Close
-              </button>
-            </div>
+        {mode === "pan-udyam" && (
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              onClick={onClose}
+              className="rounded-xl border border-[#273647] px-5 py-3 text-white"
+            >
+              Cancel
+            </button>
+            <button
+              onClick={handleSubmit}
+              disabled={loading}
+              className="rounded-xl bg-blue-600 px-5 py-3 text-white disabled:opacity-60"
+            >
+              {loading ? "Verifying..." : "Verify"}
+            </button>
           </div>
         )}
       </div>

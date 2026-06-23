@@ -6,7 +6,6 @@ import ApiKeyCard from "@/components/apikeys/api-key-card";
 import WalletBalance from "@/components/wallet/wallet-balance";
 import WalletStats from "@/components/wallet/wallet-stats";
 import TransactionsTable from "@/components/wallet/transactions-table";
-
 import GenerateKeyModal from "@/components/apikeys/generate-key-modal";
 import ConfirmModal from "@/components/apikeys/confirm-modal";
 import AddFundsModal from "@/components/wallet/add-funds-modal";
@@ -25,6 +24,7 @@ type MeUser = {
 type ApiKey = {
   id: string;
   userId: string;
+  name: string | null;
   apiKey: string;
   isActive: boolean;
   createdAt: string;
@@ -69,15 +69,8 @@ function formatDateTime(value: string) {
 
 async function loadRazorpayScript() {
   return new Promise<boolean>((resolve) => {
-    if (typeof window === "undefined") {
-      resolve(false);
-      return;
-    }
-
-    if (window.Razorpay) {
-      resolve(true);
-      return;
-    }
+    if (typeof window === "undefined") return resolve(false);
+    if (window.Razorpay) return resolve(true);
 
     const script = document.createElement("script");
     script.src = "https://checkout.razorpay.com/v1/checkout.js";
@@ -108,20 +101,18 @@ export default function ApiKeysPage() {
   const [addFundsOpen, setAddFundsOpen] = useState(false);
   const [toastOpen, setToastOpen] = useState(false);
   const [toastMessage, setToastMessage] = useState("API Key Copied");
-  const [selectedKeyId, setSelectedKeyId] = useState<string | null>(null);
-  const [hiddenKeyIds, setHiddenKeyIds] = useState<string[]>([]);
+  const [selectedKey, setSelectedKey] = useState<ApiKey | null>(null);
+  const [showRevoked, setShowRevoked] = useState(false);
 
-  const visibleApiKeys = useMemo(
-    () => apiKeys.filter((key) => !hiddenKeyIds.includes(key.id)),
-    [apiKeys, hiddenKeyIds]
+  const activeKey = useMemo(
+    () => apiKeys.find((key) => key.isActive) ?? null,
+    [apiKeys]
   );
-  const activeKeys = visibleApiKeys.filter(
-  (key) => key.isActive
-);
 
-const revokedKeys = visibleApiKeys.filter(
-  (key) => !key.isActive
-);
+  const revokedKeys = useMemo(
+    () => apiKeys.filter((key) => !key.isActive),
+    [apiKeys]
+  );
 
   const todaySpend = useMemo(() => {
     const today = new Date().toDateString();
@@ -169,34 +160,31 @@ const revokedKeys = visibleApiKeys.filter(
     setTransactions(transactionsRes.data as WalletTransaction[]);
   };
 
-  const loadPage = async () => {
-    try {
-      setError("");
-      setLoading(true);
-      await refreshPage();
-    } catch (err: any) {
-      console.error(err);
-      setError(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Failed to load API Keys & Wallet."
-      );
-    } finally {
-      setLoading(false);
-    }
-  };
-
   useEffect(() => {
-    void loadPage();
+    (async () => {
+      try {
+        setError("");
+        setLoading(true);
+        await refreshPage();
+      } catch (err: any) {
+        console.error(err);
+        setError(
+          err?.response?.data?.message ||
+            err?.message ||
+            "Failed to load API Keys & Wallet."
+        );
+      } finally {
+        setLoading(false);
+      }
+    })();
   }, []);
 
-  const handleGenerateKey = async () => {
+  const handleGenerateKey = async (name: string) => {
     if (!userId) return;
-
     try {
       setBusy(true);
       setError("");
-      await api.post(`/api-keys/${userId}`);
+      await api.post(`/api-keys/${userId}`, { name });
       setToastMessage("API key generated");
       setToastOpen(true);
       await refreshPage();
@@ -213,12 +201,13 @@ const revokedKeys = visibleApiKeys.filter(
   };
 
   const handleRotateKey = async () => {
-    if (!userId) return;
-
+    if (!selectedKey || !userId) return;
     try {
       setBusy(true);
       setError("");
-      await api.post(`/api-keys/regenerate/${userId}`);
+      await api.post(`/api-keys/regenerate/${userId}`, {
+        name: selectedKey.name || "API Key",
+      });
       setToastMessage("API key rotated");
       setToastOpen(true);
       await refreshPage();
@@ -235,37 +224,22 @@ const revokedKeys = visibleApiKeys.filter(
   };
 
   const handleDeleteKey = async () => {
-    if (!selectedKeyId) return;
-
+    if (!selectedKey || !userId) return;
     try {
       setBusy(true);
       setError("");
-      const handleDeleteKey = async () => {
-  if (!selectedKeyId) return;
-
-  setHiddenKeyIds((prev) => [
-    ...prev,
-    selectedKeyId,
-  ]);
-
-  setToastMessage("API Key removed");
-  setToastOpen(true);
-
-  setDeleteOpen(false);
-  setSelectedKeyId(null);
-};
-      setHiddenKeyIds((prev) => [...prev, selectedKeyId]);
-      setToastMessage("API key deleted");
+      await api.delete(`/api-keys/${selectedKey.id}`);
+      setToastMessage("API key deactivated");
       setToastOpen(true);
       setDeleteOpen(false);
-      setSelectedKeyId(null);
+      setSelectedKey(null);
       await refreshPage();
     } catch (err: any) {
       console.error(err);
       setError(
         err?.response?.data?.message ||
           err?.message ||
-          "Failed to delete API key."
+          "Failed to deactivate API key."
       );
     } finally {
       setBusy(false);
@@ -291,14 +265,15 @@ const revokedKeys = visibleApiKeys.filter(
       };
 
       const loaded = await loadRazorpayScript();
-const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
+      const razorpayKey = process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID;
 
-if (!loaded || !razorpayKey) {
-  setError(
-    "Razorpay is not configured. Add NEXT_PUBLIC_RAZORPAY_KEY_ID to frontend/.env.local and restart the dev server."
-  );
-  return;
-}
+      if (!loaded || !razorpayKey) {
+        setError(
+          "Razorpay is not configured. Add NEXT_PUBLIC_RAZORPAY_KEY_ID to frontend/.env.local and restart the dev server."
+        );
+        return;
+      }
+
       const options = {
         key: razorpayKey,
         amount: order.amount,
@@ -320,12 +295,8 @@ if (!loaded || !razorpayKey) {
           setAddFundsOpen(false);
           await refreshPage();
         },
-        prefill: {
-          email: "",
-        },
-        theme: {
-          color: "#2563eb",
-        },
+        prefill: { email: "" },
+        theme: { color: "#2563eb" },
       };
 
       const rzp = new window.Razorpay(options);
@@ -343,34 +314,28 @@ if (!loaded || !razorpayKey) {
   };
 
   const walletRows = transactions.map((tx) => ({
-  id: tx.id,
-  type: (tx.type === "CREDIT"
-    ? "Recharge"
-    : "Usage") as "Recharge" | "Usage" | "Refund",
-
-  date: formatDateTime(tx.createdAt),
-
-  description: tx.description || "Wallet Transaction",
-
-  amount: `${tx.type === "CREDIT" ? "+" : "-"} ₹${new Intl.NumberFormat(
-    "en-IN"
-  ).format(Number(tx.amount || 0))}`,
-
-  status: (tx.type === "CREDIT"
-    ? "Completed"
-    : "Charged") as
+    type: (tx.type === "CREDIT" ? "Recharge" : "Usage") as
+      | "Recharge"
+      | "Usage"
+      | "Refund",
+    date: formatDateTime(tx.createdAt),
+    description: tx.description || "Wallet Transaction",
+    amount: `${tx.type === "CREDIT" ? "+" : "-"} ₹${new Intl.NumberFormat(
+      "en-IN"
+    ).format(Number(tx.amount || 0))}`,
+    status: (tx.type === "CREDIT" ? "Completed" : "Charged") as
       | "Completed"
       | "Charged"
       | "Refunded",
-}));
+  }));
+
+  const keyLabel = (key: ApiKey) =>
+    key.name?.trim() ? key.name.trim() : `${key.apiKey.slice(0, 12)}…`;
 
   return (
     <div className="p-8">
       <div className="mb-10">
-        <h1 className="text-5xl font-semibold text-white">
-          API Keys & Wallet
-        </h1>
-
+        <h1 className="text-5xl font-semibold text-white">API Keys & Wallet</h1>
         <p className="mt-2 text-slate-400">
           Manage authentication credentials and billing.
         </p>
@@ -382,30 +347,13 @@ if (!loaded || !razorpayKey) {
         </div>
       )}
 
-      <div
-        className="
-        rounded-xl
-        border border-slate-800
-        bg-[#0b1d31]
-        p-6
-      "
-      >
+      <div className="rounded-xl border border-slate-800 bg-[#0b1d31] p-6">
         <div className="mb-6 flex items-center justify-between">
-          <h2 className="text-2xl font-semibold text-white">
-            Active API Keys
-          </h2>
+          <h2 className="text-2xl font-semibold text-white">Active API Keys</h2>
 
           <button
             onClick={() => setGenerateOpen(true)}
-            className="
-            rounded-xl
-            bg-blue-600
-            px-6
-            py-3
-            text-white
-            transition-all
-            hover:bg-blue-500
-          "
+            className="rounded-xl bg-blue-600 px-6 py-3 text-white transition-all hover:bg-blue-500"
           >
             Generate Key
           </button>
@@ -415,98 +363,80 @@ if (!loaded || !razorpayKey) {
           <div className="rounded-xl border border-dashed border-slate-700 p-10 text-center text-slate-400">
             Loading API keys...
           </div>
-        ) : visibleApiKeys.length === 0 ? (
-          <div
-            className="
-            rounded-xl
-            border border-dashed border-slate-700
-            p-10
-            text-center
-            "
-          >
-            <h3 className="text-xl font-semibold">
-              No API Keys Found
-            </h3>
-
+        ) : !activeKey ? (
+          <div className="rounded-xl border border-dashed border-slate-700 p-10 text-center">
+            <h3 className="text-xl font-semibold">No Active API Key</h3>
             <p className="mt-2 text-slate-400">
-              Generate your first API key to begin.
+              Generate a key to start using the API.
             </p>
           </div>
         ) : (
           <div className="space-y-8">
+            <div>
+              <h3 className="mb-4 text-lg font-semibold text-white">
+                Current Active Key
+              </h3>
 
-  {/* ACTIVE KEY */}
+              <ApiKeyCard
+                variant="active"
+                name={keyLabel(activeKey)}
+                keyValue={activeKey.apiKey}
+                createdAt={formatDate(activeKey.createdAt)}
+                onRotate={() => {
+                  setSelectedKey(activeKey);
+                  setRotateOpen(true);
+                }}
+                onCopy={() => {
+                  setToastMessage("API Key Copied");
+                  setToastOpen(true);
+                }}
+                onDelete={() => {
+                  setSelectedKey(activeKey);
+                  setDeleteOpen(true);
+                }}
+              />
+            </div>
 
-  {activeKeys.length > 0 && (
-    <div>
-      <h3 className="mb-4 text-lg font-semibold text-white">
-        Current Active Key
-      </h3>
+            {revokedKeys.length > 0 && (
+              <div className="mt-6">
+                <button
+                  onClick={() => setShowRevoked((v) => !v)}
+                  className="text-sm font-medium text-slate-400 hover:text-white transition-all"
+                >
+                  {showRevoked
+                    ? `Hide Revoked Keys (${revokedKeys.length})`
+                    : `Show Revoked Keys (${revokedKeys.length})`}
+                </button>
 
-      {activeKeys.map((key) => (
-        <ApiKeyCard
-          key={key.id}
-          active={true}
-          name="Current API Key"
-          keyValue={key.apiKey}
-          createdAt={formatDate(key.createdAt)}
-          onRotate={() => {
-            setSelectedKeyId(key.id);
-            setRotateOpen(true);
-          }}
-          onCopy={() => {
-            setToastMessage("API Key Copied");
-            setToastOpen(true);
-          }}
-          onDelete={() => {
-            setSelectedKeyId(key.id);
-            setDeleteOpen(true);
-          }}
-        />
-      ))}
-    </div>
-  )}
-
-  {/* REVOKED KEYS */}
-
-  {revokedKeys.length > 0 && (
-    <div>
-      <h3 className="mb-4 text-lg font-semibold text-slate-400">
-        Revoked Keys
-      </h3>
-
-      <div className="space-y-4">
-        {revokedKeys.map((key) => (
-          <ApiKeyCard
-            key={key.id}
-            active={false}
-            name={key.apiKey.slice(0, 12) + "..."}
-            keyValue={key.apiKey}
-            createdAt={formatDate(key.createdAt)}
-            onCopy={() => {
-              setToastMessage("API Key Copied");
-              setToastOpen(true);
-            } }
-            onDelete={() => {
-              setSelectedKeyId(key.id);
-              setDeleteOpen(true);
-            } } onRotate={function (): void {
-              throw new Error("Function not implemented.");
-            } }          />
-        ))}
-      </div>
-    </div>
-  )}
-</div>
+                {showRevoked && (
+                  <div className="mt-4 space-y-4">
+                    {revokedKeys.map((key) => (
+                      <ApiKeyCard
+                        key={key.id}
+                        variant="revoked"
+                        name={key.name?.trim() ? key.name : key.apiKey.slice(0, 12) + "..."}
+                        keyValue={key.apiKey}
+                        createdAt={formatDate(key.createdAt)}
+                        onDelete={() => {
+                          setSelectedKey(key);
+                          setDeleteOpen(true);
+                        }}
+                      />
+                    ))}
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
         )}
       </div>
 
-      <div className="mt-6 grid gap-4 grid-cols-1 xl:grid-cols-4">
+      <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-4">
         <div className="col-span-1 xl:col-span-2">
           <WalletBalance
-  balance={wallet?.balance ?? 0}
-  onAddFunds={() => setAddFundsOpen(true)}
-/>
+            balance={wallet?.balance ?? 0}
+            onAddFunds={() => setAddFundsOpen(true)}
+          />
         </div>
 
         <div className="col-span-1 xl:col-span-2 grid gap-4">
@@ -525,18 +455,16 @@ if (!loaded || !razorpayKey) {
       <GenerateKeyModal
         open={generateOpen}
         onClose={() => setGenerateOpen(false)}
-        onGenerate={async () => {
-          await handleGenerateKey();
-        }}
+        onGenerate={handleGenerateKey}
       />
 
       <ConfirmModal
         open={deleteOpen}
-        title="Delete API Key"
-        description="This action cannot be undone."
+        title="Deactivate API Key"
+        description="This will revoke the key immediately."
         onCancel={() => {
           setDeleteOpen(false);
-          setSelectedKeyId(null);
+          setSelectedKey(null);
         }}
         onConfirm={handleDeleteKey}
       />
@@ -545,7 +473,7 @@ if (!loaded || !razorpayKey) {
         open={rotateOpen}
         onClose={() => {
           setRotateOpen(false);
-          setSelectedKeyId(null);
+          setSelectedKey(null);
         }}
         onConfirm={handleRotateKey}
       />

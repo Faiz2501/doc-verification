@@ -3,8 +3,7 @@
 const filters = [
   "All",
   "Active",
-  "Live",
-  "Beta",
+  "Inactive",
 ];
 
 export default function ServiceFilters({
