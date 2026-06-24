@@ -1,21 +1,5 @@
-import axios from "axios";
+import api, { API_BASE_URL } from "@/lib/api/axios";
 
-export const api = axios.create({
-  baseURL: "http://localhost:3000",
-});
-
-api.interceptors.request.use(
-  (config) => {
-    const token =
-      localStorage.getItem(
-        "idproofpro_token"
-      );
-
-    if (token) {
-      config.headers.Authorization =
-        `Bearer ${token}`;
-    }
-
-    return config;
-  }
-);
+export { API_BASE_URL };
+export { api };
+export default api;

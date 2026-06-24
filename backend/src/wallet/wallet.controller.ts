@@ -1,13 +1,9 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Param,
-  Body,
-} from '@nestjs/common';
+import { Controller, Get, Post, Param, Body, UseGuards } from '@nestjs/common';
 
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { WalletService } from './wallet.service';
 
+@UseGuards(JwtAuthGuard)
 @Controller('wallet')
 export class WalletController {
   constructor(
@@ -15,21 +11,13 @@ export class WalletController {
   ) {}
 
   @Get(':userId')
-  getWallet(
-    @Param('userId') userId: string,
-  ) {
-    return this.walletService.getWallet(
-      userId,
-    );
+  getWallet(@Param('userId') userId: string) {
+    return this.walletService.getWallet(userId);
   }
 
   @Get('summary/:userId')
-  getWalletSummary(
-    @Param('userId') userId: string,
-  ) {
-    return this.walletService.getWalletSummary(
-      userId,
-    );
+  getWalletSummary(@Param('userId') userId: string) {
+    return this.walletService.getWalletSummary(userId);
   }
 
   @Post('credit')
@@ -65,11 +53,7 @@ export class WalletController {
   }
 
   @Get('transactions/:userId')
-  getTransactions(
-    @Param('userId') userId: string,
-  ) {
-    return this.walletService.getTransactions(
-      userId,
-    );
+  getTransactions(@Param('userId') userId: string) {
+    return this.walletService.getTransactions(userId);
   }
 }

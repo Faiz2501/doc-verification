@@ -109,7 +109,6 @@ model SupportTicket {
   reply     String?
   status    String
   createdAt DateTime @default(now())
-  reply     String?
 }
 
 enum Role {

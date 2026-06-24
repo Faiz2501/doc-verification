@@ -1,16 +1,13 @@
-import {
-  Controller,
-  Post,
-  Body,
-} from '@nestjs/common';
+import { Controller, Post, Body, UseGuards } from '@nestjs/common';
 
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { RazorpayService } from './razorpay.service';
 
+@UseGuards(JwtAuthGuard)
 @Controller('razorpay')
 export class RazorpayController {
   constructor(
-    private readonly razorpayService:
-      RazorpayService,
+    private readonly razorpayService: RazorpayService,
   ) {}
 
   @Post('create-order')
@@ -21,10 +18,7 @@ export class RazorpayController {
       amount: number;
     },
   ) {
-    return this.razorpayService.createOrder(
-      body.userId,
-      body.amount,
-    );
+    return this.razorpayService.createOrder(body.userId, body.amount);
   }
 
   @Post('verify-payment')
@@ -33,24 +27,21 @@ export class RazorpayController {
     body: {
       userId: string;
       amount: number;
-
       razorpayOrderId: string;
       razorpayPaymentId: string;
       razorpaySignature: string;
     },
   ) {
-    const verified =
-      this.razorpayService.verifyPayment(
-        body.razorpayOrderId,
-        body.razorpayPaymentId,
-        body.razorpaySignature,
-      );
+    const verified = this.razorpayService.verifyPayment(
+      body.razorpayOrderId,
+      body.razorpayPaymentId,
+      body.razorpaySignature,
+    );
 
     if (!verified) {
       return {
         success: false,
-        message:
-          'Payment verification failed',
+        message: 'Payment verification failed',
       };
     }
 

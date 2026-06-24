@@ -8,6 +8,7 @@ import {
 
 import { StaffService } from './staff.service';
 
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Permission } from '../common/decorators/permission.decorator';
 import { PermissionGuard } from '../common/guards/permission.guard';
 
@@ -17,7 +18,7 @@ export class StaffController {
     private readonly staffService: StaffService,
   ) {}
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('MANAGE_STAFF')
   @Post('create')
   createStaff(
@@ -32,14 +33,14 @@ export class StaffController {
     return this.staffService.createStaff(body);
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('MANAGE_STAFF')
   @Get()
   getAllStaff() {
     return this.staffService.getAllStaff();
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('MANAGE_STAFF')
   @Post('assign-permission')
   assignPermission(
@@ -55,7 +56,7 @@ export class StaffController {
     );
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('MANAGE_STAFF')
   @Post('set-permissions')
   setPermissions(
@@ -71,7 +72,7 @@ export class StaffController {
     );
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('MANAGE_STAFF')
   @Get('permissions')
   getStaffPermissions() {

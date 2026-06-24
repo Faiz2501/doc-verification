@@ -11,6 +11,7 @@ import {
 
 import { PricingService } from './pricing.service';
 
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Permission } from '../common/decorators/permission.decorator';
 import { PermissionGuard } from '../common/guards/permission.guard';
 
@@ -30,7 +31,7 @@ export class PricingController {
     return this.pricingService.getDeveloperDocs();
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('MANAGE_PRICING')
   @Post()
   createPricing(
@@ -40,12 +41,10 @@ export class PricingController {
       price: number;
     },
   ) {
-    return this.pricingService.createPricing(
-      body,
-    );
+    return this.pricingService.createPricing(body);
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('MANAGE_PRICING')
   @Patch(':id')
   updatePricing(
@@ -58,14 +57,10 @@ export class PricingController {
     );
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('MANAGE_PRICING')
   @Delete(':id')
-  deletePricing(
-    @Param('id') id: string,
-  ) {
-    return this.pricingService.deletePricing(
-      id,
-    );
+  deletePricing(@Param('id') id: string) {
+    return this.pricingService.deletePricing(id);
   }
 }

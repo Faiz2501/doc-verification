@@ -7,6 +7,7 @@ import {
 
 import { AdminService } from './admin.service';
 
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Permission } from '../common/decorators/permission.decorator';
 import { PermissionGuard } from '../common/guards/permission.guard';
 
@@ -16,44 +17,42 @@ export class AdminController {
     private readonly adminService: AdminService,
   ) {}
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('VIEW_USERS')
   @Get('overview')
   getOverview() {
     return this.adminService.getOverview();
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('VIEW_USERS')
   @Get('users')
   getUsers() {
     return this.adminService.getUsers();
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('VIEW_USERS')
   @Get('users/:id')
-  getUserDetail(
-    @Param('id') id: string,
-  ) {
+  getUserDetail(@Param('id') id: string) {
     return this.adminService.getUserDetail(id);
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('VIEW_TRANSACTIONS')
   @Get('revenue')
   getRevenue() {
     return this.adminService.getRevenueAnalytics();
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('VIEW_TRANSACTIONS')
   @Get('transactions')
   getTransactions() {
     return this.adminService.getRecentTransactions();
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('VIEW_VERIFICATIONS')
   @Get('verifications')
   getVerifications() {

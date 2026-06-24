@@ -10,6 +10,8 @@ import {
 
 import { UsersService } from './users.service';
 import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { Permission } from '../common/decorators/permission.decorator';
+import { PermissionGuard } from '../common/guards/permission.guard';
 
 @Controller('users')
 export class UsersController {
@@ -20,9 +22,7 @@ export class UsersController {
   @UseGuards(JwtAuthGuard)
   @Get('me')
   getProfile(@Request() req) {
-    return this.usersService.getProfile(
-      req.user.sub,
-    );
+    return this.usersService.getProfile(req.user.sub);
   }
 
   @UseGuards(JwtAuthGuard)
@@ -42,25 +42,25 @@ export class UsersController {
     );
   }
 
-  // ADMIN - GET ALL USERS
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @Permission('VIEW_USERS')
   @Get()
   getAllUsers() {
     return this.usersService.getAllUsers();
   }
 
-  // ADMIN - GET USER BY ID
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @Permission('VIEW_USERS')
   @Get(':id')
-  getUserById(
-    @Param('id') id: string,
-  ) {
+  getUserById(@Param('id') id: string) {
     return this.usersService.getUserById(id);
   }
 
-  // ADMIN - UPDATE USER ROLE
+  @UseGuards(JwtAuthGuard, PermissionGuard)
+  @Permission('MANAGE_STAFF')
   @Patch(':id/role')
   updateUserRole(
     @Param('id') id: string,
-
     @Body()
     body: {
       role: string;

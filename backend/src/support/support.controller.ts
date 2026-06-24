@@ -11,10 +11,11 @@ import {
 
 import { SupportService } from './support.service';
 
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 import { Permission } from '../common/decorators/permission.decorator';
 import { PermissionGuard } from '../common/guards/permission.guard';
 
-@Controller('support')
+@Controller(['support', 'admin/support'])
 export class SupportController {
   constructor(
     private readonly supportService: SupportService,
@@ -29,47 +30,33 @@ export class SupportController {
       message: string;
     },
   ) {
-    return this.supportService.createTicket(
-      body,
-    );
+    return this.supportService.createTicket(body);
   }
 
   @Get('user/:userId')
-  getUserTickets(
-    @Param('userId')
-    userId: string,
-  ) {
-    return this.supportService.getUserTickets(
-      userId,
-    );
+  getUserTickets(@Param('userId') userId: string) {
+    return this.supportService.getUserTickets(userId);
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('VIEW_SUPPORT')
   @Get('all')
   getAllTickets() {
     return this.supportService.getAllTickets();
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('VIEW_SUPPORT')
   @Get(':ticketId')
-  getTicket(
-    @Param('ticketId')
-    ticketId: string,
-  ) {
-    return this.supportService.getTicketById(
-      ticketId,
-    );
+  getTicket(@Param('ticketId') ticketId: string) {
+    return this.supportService.getTicketById(ticketId);
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('VIEW_SUPPORT')
   @Patch(':ticketId/status')
   updateStatus(
-    @Param('ticketId')
-    ticketId: string,
-
+    @Param('ticketId') ticketId: string,
     @Body()
     body: {
       status: string;
@@ -81,13 +68,11 @@ export class SupportController {
     );
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('VIEW_SUPPORT')
   @Patch(':ticketId/reply')
   replyTicket(
-    @Param('ticketId')
-    ticketId: string,
-
+    @Param('ticketId') ticketId: string,
     @Body()
     body: {
       reply: string;
@@ -101,15 +86,10 @@ export class SupportController {
     );
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(JwtAuthGuard, PermissionGuard)
   @Permission('VIEW_SUPPORT')
   @Delete(':ticketId')
-  deleteTicket(
-    @Param('ticketId')
-    ticketId: string,
-  ) {
-    return this.supportService.deleteTicket(
-      ticketId,
-    );
+  deleteTicket(@Param('ticketId') ticketId: string) {
+    return this.supportService.deleteTicket(ticketId);
   }
 }
