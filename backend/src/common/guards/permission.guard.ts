@@ -34,9 +34,15 @@ export class PermissionGuard
       context.switchToHttp().getRequest();
 
     const userId =
+      request.user?.sub ||
+      request.user?.id ||
       request.headers['user-id'];
 
     if (!userId) {
+      console.log(
+        '[PermissionGuard] No user id found',
+      );
+
       return false;
     }
 
@@ -48,6 +54,10 @@ export class PermissionGuard
       });
 
     if (!user) {
+      console.log(
+        `[PermissionGuard] User not found: ${userId}`,
+      );
+
       return false;
     }
 

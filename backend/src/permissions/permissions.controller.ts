@@ -8,6 +8,7 @@ import { PermissionsService } from './permissions.service';
 
 import { Permission } from '../common/decorators/permission.decorator';
 import { PermissionGuard } from '../common/guards/permission.guard';
+import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
 
 @Controller('permissions')
 export class PermissionsController {
@@ -15,21 +16,30 @@ export class PermissionsController {
     private readonly permissionsService: PermissionsService,
   ) {}
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(
+    JwtAuthGuard,
+    PermissionGuard,
+  )
   @Permission('MANAGE_STAFF')
   @Get()
   getPermissions() {
     return this.permissionsService.getPermissions();
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(
+    JwtAuthGuard,
+    PermissionGuard,
+  )
   @Permission('MANAGE_STAFF')
   @Get('roles')
   getRoles() {
     return this.permissionsService.getRoles();
   }
 
-  @UseGuards(PermissionGuard)
+  @UseGuards(
+    JwtAuthGuard,
+    PermissionGuard,
+  )
   @Permission('MANAGE_STAFF')
   @Get('assignments')
   getAssignments() {

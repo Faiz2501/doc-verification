@@ -57,6 +57,22 @@ export class StaffController {
 
   @UseGuards(PermissionGuard)
   @Permission('MANAGE_STAFF')
+  @Post('set-permissions')
+  setPermissions(
+    @Body()
+    body: {
+      userId: string;
+      permissionIds: string[];
+    },
+  ) {
+    return this.staffService.setPermissions(
+      body.userId,
+      body.permissionIds,
+    );
+  }
+
+  @UseGuards(PermissionGuard)
+  @Permission('MANAGE_STAFF')
   @Get('permissions')
   getStaffPermissions() {
     return this.staffService.getStaffPermissions();

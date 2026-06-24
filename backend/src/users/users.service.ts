@@ -74,6 +74,27 @@ export class UsersService {
     });
   }
 
+  async updateUserRole(
+    id: string,
+    role: string,
+  ) {
+    return this.prisma.user.update({
+      where: {
+        id,
+      },
+      data: {
+        role: role as any,
+      },
+      select: {
+        id: true,
+        email: true,
+        firstName: true,
+        lastName: true,
+        role: true,
+      },
+    });
+  }
+
   // GET ALL USERS
   async getAllUsers() {
     return this.prisma.user.findMany({
@@ -87,6 +108,7 @@ export class UsersService {
         lastName: true,
         role: true,
         createdAt: true,
+
         wallet: {
           select: {
             balance: true,
@@ -124,6 +146,17 @@ export class UsersService {
               name: true,
               isActive: true,
               createdAt: true,
+            },
+          },
+
+          staffPermissions: {
+            include: {
+              permission: {
+                select: {
+                  id: true,
+                  name: true,
+                },
+              },
             },
           },
 

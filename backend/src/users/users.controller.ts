@@ -55,4 +55,20 @@ export class UsersController {
   ) {
     return this.usersService.getUserById(id);
   }
+
+  // ADMIN - UPDATE USER ROLE
+  @Patch(':id/role')
+  updateUserRole(
+    @Param('id') id: string,
+
+    @Body()
+    body: {
+      role: string;
+    },
+  ) {
+    return this.usersService.updateUserRole(
+      id,
+      body.role,
+    );
+  }
 }

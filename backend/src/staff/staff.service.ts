@@ -75,6 +75,33 @@ export class StaffService {
     });
   }
 
+  async setPermissions(
+    userId: string,
+    permissionIds: string[],
+  ) {
+    await this.prisma.staffPermission.deleteMany({
+      where: {
+        userId,
+      },
+    });
+
+    if (!permissionIds.length) {
+      return {
+        message:
+          'Permissions cleared successfully',
+      };
+    }
+
+    return this.prisma.staffPermission.createMany({
+      data: permissionIds.map(
+        (permissionId) => ({
+          userId,
+          permissionId,
+        }),
+      ),
+    });
+  }
+
   async getStaffPermissions() {
     return this.prisma.staffPermission.findMany({
       include: {
