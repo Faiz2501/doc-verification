@@ -1,8 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import api from "@/lib/api/axios";
 import { Loader2 } from "lucide-react";
+import api from "@/lib/api/axios";
 
 type Props = {
   open: boolean;
@@ -11,33 +11,28 @@ type Props = {
   onSaved?: () => void;
 };
 
-type UserDetails = {
-  id: string;
-  name?: string | null;
-  email: string;
-  role: string;
-  walletBalance?: number;
-  wallet?: { balance?: number };
-  apiKeys?: unknown[];
-  verificationStats?: {
-    total: number;
-    success: number;
-    failed: number;
+type UserPermission = {
+  permission: {
+    id: string;
+    name: string;
   };
-  permissions?: string[];
-  assignedPermissions?: string[];
-  staffPermissions?: string[];
 };
 
-type PermissionsResponse =
-  | string[]
-  | {
-      availablePermissions?: string[];
-      assignedPermissions?: string[];
-      permissions?: string[];
-      available?: string[];
-      assigned?: string[];
-    };
+type UserDetails = {
+  id: string;
+  email: string;
+  firstName?: string | null;
+  lastName?: string | null;
+  role: string;
+  wallet?: { balance?: number };
+  staffPermissions?: UserPermission[];
+};
+
+type PermissionRecord = {
+  id: string;
+  name: string;
+  createdAt?: string;
+};
 
 const fallbackPermissions = [
   "MANAGE_STAFF",
@@ -58,31 +53,6 @@ function prettyRole(role?: string | null) {
   return normalizeRole(role) === "STAFF" ? "Staff" : "Developer";
 }
 
-function parsePermissions(payload: PermissionsResponse) {
-  if (Array.isArray(payload)) {
-    return {
-      available: payload,
-      assigned: [] as string[],
-    };
-  }
-
-  const available =
-    payload.availablePermissions ??
-    payload.available ??
-    payload.permissions ??
-    fallbackPermissions;
-
-  const assigned =
-    payload.assignedPermissions ??
-    payload.assigned ??
-    [];
-
-  return {
-    available: available.length ? available : fallbackPermissions,
-    assigned,
-  };
-}
-
 export default function StaffDetailsModal({
   open,
   userId,
@@ -93,15 +63,13 @@ export default function StaffDetailsModal({
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
   const [user, setUser] = useState<UserDetails | null>(null);
-  const [availablePermissions, setAvailablePermissions] = useState<string[]>(
-    fallbackPermissions
-  );
-  const [selectedPermissions, setSelectedPermissions] = useState<string[]>([]);
+  const [availablePermissions, setAvailablePermissions] = useState<PermissionRecord[]>([]);
+  const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([]);
   const [role, setRole] = useState<"DEVELOPER" | "STAFF">("DEVELOPER");
 
   const walletBalance = useMemo(() => {
     if (!user) return 0;
-    return user.walletBalance ?? user.wallet?.balance ?? 0;
+    return user.wallet?.balance ?? 0;
   }, [user]);
 
   useEffect(() => {
@@ -112,26 +80,21 @@ export default function StaffDetailsModal({
         setLoading(true);
         setError("");
 
-        const [userRes, permissionsRes] = await Promise.all([
-          api.get(`/users/${userId}`),
-          api.get("/staff/permissions"),
-        ]);
+        const userRes = await api.get(`/users/${userId}`);
+        const permissionsRes = await api.get("/permissions");
 
         const userData = userRes.data as UserDetails;
-        const permissionsData = parsePermissions(permissionsRes.data as PermissionsResponse);
-
-        const assignedFromUser =
-          userData.permissions ??
-          userData.assignedPermissions ??
-          userData.staffPermissions ??
-          permissionsData.assigned;
+        const permissionsData = permissionsRes.data as PermissionRecord[];
 
         setUser(userData);
         setRole(normalizeRole(userData.role));
-        setAvailablePermissions(
-          permissionsData.available.length ? permissionsData.available : fallbackPermissions
-        );
-        setSelectedPermissions(Array.from(new Set(assignedFromUser ?? [])));
+
+        setAvailablePermissions(Array.isArray(permissionsData) ? permissionsData : []);
+
+        const assignedIds =
+          userData.staffPermissions?.map((sp) => sp.permission.id) ?? [];
+
+        setSelectedPermissionIds(Array.from(new Set(assignedIds)));
       } catch (err: any) {
         console.error(err);
         setError(
@@ -149,11 +112,15 @@ export default function StaffDetailsModal({
 
   if (!open) return null;
 
-  const togglePermission = (permission: string) => {
-    setSelectedPermissions((current) =>
-      current.includes(permission)
-        ? current.filter((item) => item !== permission)
-        : [...current, permission]
+  const isStaff = role === "STAFF";
+
+  const togglePermission = (permissionId: string) => {
+    if (!isStaff) return;
+
+    setSelectedPermissionIds((current) =>
+      current.includes(permissionId)
+        ? current.filter((item) => item !== permissionId)
+        : [...current, permissionId]
     );
   };
 
@@ -164,13 +131,13 @@ export default function StaffDetailsModal({
       setSaving(true);
       setError("");
 
-      await api.patch(`/users/${userId}`, {
-        role: role === "STAFF" ? "STAFF" : "DEVELOPER",
+      await api.patch(`/users/${userId}/role`, {
+        role: isStaff ? "STAFF" : "CUSTOMER",
       });
 
-      await api.post("/staff/assign-permission", {
+      await api.post("/staff/set-permissions", {
         userId,
-        permissions: role === "STAFF" ? selectedPermissions : [],
+        permissionIds: isStaff ? selectedPermissionIds : [],
       });
 
       await onSaved?.();
@@ -189,7 +156,7 @@ export default function StaffDetailsModal({
 
   return (
     <div className="fixed inset-0 z-[100] bg-black/50">
-      <div className="absolute right-0 top-0 h-full w-[500px] border-l border-slate-800 bg-[#08172b] p-8 overflow-y-auto">
+      <div className="absolute right-0 top-0 h-full w-[500px] overflow-y-auto border-l border-slate-800 bg-[#08172b] p-8">
         <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold">User Access</h2>
 
@@ -211,7 +178,11 @@ export default function StaffDetailsModal({
           <div className="mt-8 space-y-6">
             <div>
               <p className="text-slate-500">Name</p>
-              <p className="mt-1 text-lg">{user?.name || "Unnamed User"}</p>
+              <p className="mt-1 text-lg">
+                {user?.firstName || user?.lastName
+                  ? `${user?.firstName ?? ""} ${user?.lastName ?? ""}`.trim()
+                  : "Unnamed User"}
+              </p>
             </div>
 
             <div>
@@ -262,24 +233,35 @@ export default function StaffDetailsModal({
               <p className="mb-4 text-slate-500">Permissions</p>
 
               <div className="space-y-3">
-                {availablePermissions.map((permission) => (
-                  <label
-                    key={permission}
-                    className="flex items-center justify-between rounded-xl border border-slate-800 px-4 py-3"
-                  >
-                    <span>{permission}</span>
+                {(availablePermissions.length
+                  ? availablePermissions
+                  : fallbackPermissions.map((name) => ({ id: name, name }))).map(
+                  (permission) => (
+                    <label
+                      key={permission.id}
+                      className="flex items-center justify-between rounded-xl border border-slate-800 px-4 py-3"
+                    >
+                      <span>{permission.name}</span>
 
-                    <input
-                      type="checkbox"
-                      checked={selectedPermissions.includes(permission)}
-                      onChange={() => togglePermission(permission)}
-                    />
-                  </label>
-                ))}
+                      <input
+                        type="checkbox"
+                        checked={selectedPermissionIds.includes(permission.id)}
+                        onChange={() => togglePermission(permission.id)}
+                        disabled={!isStaff}
+                        className={!isStaff ? 'cursor-not-allowed opacity-50' : ''}
+                      />
+                    </label>
+                  )
+                )}
               </div>
+              {!isStaff && (
+                <p className="text-sm text-slate-500">
+                  Permissions can only be assigned when the user is Staff.
+                </p>
+              )}
             </div>
 
-            <div className="pt-4 flex items-center justify-end gap-3">
+            <div className="flex items-center justify-end gap-3 pt-4">
               <button
                 onClick={onClose}
                 className="rounded-xl border border-slate-700 px-4 py-3 text-slate-300"
