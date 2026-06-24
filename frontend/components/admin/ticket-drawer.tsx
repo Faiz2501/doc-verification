@@ -16,11 +16,11 @@ type TicketMessage = {
 
 type TicketDetail = {
   id: string;
+  userId: string;
   subject: string;
-  customerName: string;
-  customerEmail: string;
   issue: string;
   status: TicketStatus;
+  createdAt?: string;
   reply?: string | null;
   conversation?: TicketMessage[];
 };
@@ -34,20 +34,11 @@ interface Props {
 
 function normalizeStatus(status?: string | null) {
   const value = (status ?? "").toUpperCase();
-
-  if (value === "IN_PROGRESS") return "IN_PROGRESS";
-  if (value === "RESOLVED") return "RESOLVED";
-  if (value === "CLOSED") return "CLOSED";
+  if (value === "CLOSED" || value === "RESOLVED") return "CLOSED";
   return "OPEN";
 }
-
 function statusLabel(status?: string | null) {
-  const value = normalizeStatus(status);
-
-  if (value === "IN_PROGRESS") return "In Progress";
-  if (value === "RESOLVED") return "Resolved";
-  if (value === "CLOSED") return "Closed";
-  return "Open";
+  return normalizeStatus(status) === "CLOSED" ? "Closed" : "Open";
 }
 
 function statusButtonClass(status: string, current: string) {
@@ -76,39 +67,22 @@ function displayNameFromUser(user: {
 }
 
 function normalizeTicket(raw: any): TicketDetail {
-  const customer =
-    raw?.customer ??
-    raw?.user ??
-    raw?.createdBy ??
-    raw?.requester ??
-    {};
-
-  const customerName =
-    raw?.userName ||
-    raw?.displayName ||
-    raw?.name ||
-    displayNameFromUser({
-      firstName: customer?.firstName,
-      lastName: customer?.lastName,
-      name: customer?.name,
-      displayName: customer?.displayName,
-      email: customer?.email,
-    });
-
   return {
     id: String(raw?.id ?? raw?.ticketId ?? ""),
+    userId: String(
+      raw?.userId ??
+        raw?.user?.id ??
+        raw?.createdBy?.id ??
+        raw?.createdBy ??
+        raw?.requester?.id ??
+        ""
+    ),
     subject:
       raw?.subject ||
       raw?.title ||
       raw?.issueTitle ||
       raw?.topic ||
       "Untitled ticket",
-    customerName,
-    customerEmail:
-      raw?.userEmail ||
-      raw?.email ||
-      customer?.email ||
-      "",
     issue:
       raw?.issue ||
       raw?.message ||
@@ -116,6 +90,7 @@ function normalizeTicket(raw: any): TicketDetail {
       raw?.details ||
       "",
     status: normalizeStatus(raw?.status),
+    createdAt: raw?.createdAt || raw?.created_at || raw?.time,
     reply: raw?.reply ?? raw?.response ?? null,
     conversation: Array.isArray(raw?.conversation)
       ? raw.conversation
@@ -327,26 +302,30 @@ export default function TicketDrawer({
           </div>
 
           <div className="space-y-8">
-            <div>
-              <p className="text-slate-500">Customer</p>
-              <p className="mt-2 text-white">
-                {loading ? "Loading..." : ticket?.customerName || "—"}
-              </p>
-            </div>
+  <div>
+    <p className="text-slate-500">User ID</p>
+    <p className="mt-2 text-white">
+      {loading ? "Loading..." : ticket?.userId || "—"}
+    </p>
+  </div>
 
-            <div>
-              <p className="text-slate-500">Email</p>
-              <p className="mt-2 text-white">
-                {loading ? "Loading..." : ticket?.customerEmail || "—"}
-              </p>
-            </div>
+  <div>
+    <p className="text-slate-500">Created At</p>
+    <p className="mt-2 text-white">
+      {loading
+        ? "Loading..."
+        : ticket?.createdAt
+        ? new Date(ticket.createdAt).toLocaleString()
+        : "—"}
+    </p>
+  </div>
 
-            <div>
-              <p className="text-slate-500">Issue</p>
-              <p className="mt-2 leading-8 text-white/95">
-                {loading ? "Loading..." : ticket?.issue || "—"}
-              </p>
-            </div>
+  <div>
+    <p className="text-slate-500">Issue</p>
+    <p className="mt-2 leading-8 text-white/95">
+      {loading ? "Loading..." : ticket?.issue || "—"}
+    </p>
+  </div>
 
             <div>
               <p className="mb-4 text-slate-500">Conversation</p>

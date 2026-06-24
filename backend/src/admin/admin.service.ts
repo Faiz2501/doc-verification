@@ -238,4 +238,96 @@ export class AdminService {
       failed,
     };
   }
+
+  async getAllTickets(options?: { status?: string }) {
+  const tickets = await this.prisma.supportTicket.findMany({
+    where: options?.status
+      ? {
+          status: options.status,
+        }
+      : undefined,
+    orderBy: {
+      createdAt: 'desc',
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  } as any);
+
+  return tickets.map((ticket) => {
+    const user = ticket.userId as {
+      email?: string;
+      role?: string;
+      firstName?: string;
+      lastName?: string;
+    } | null;
+
+    const fullName = [
+      user?.firstName,
+      user?.lastName,
+    ]
+      .filter(Boolean)
+      .join(' ')
+      .trim();
+
+    return {
+      ...ticket,
+      customerName: fullName || user?.email || 'Unnamed User',
+      customerEmail: user?.email || '',
+      userRole: user?.role || '',
+    };
+  });
+}
+async getTicketById(ticketId: string) {
+  const ticket = await this.prisma.supportTicket.findUnique({
+    where: {
+      id: ticketId,
+    },
+    include: {
+      user: {
+        select: {
+          id: true,
+          firstName: true,
+          lastName: true,
+          email: true,
+          role: true,
+        },
+      },
+    },
+  });
+
+  if (!ticket) {
+    throw new NotFoundException('Support ticket not found');
+  }
+
+  const user = ticket.user as {
+    email?: string;
+    role?: string;
+    firstName?: string;
+    lastName?: string;
+  } | null;
+
+  const fullName = [
+    user?.firstName,
+    user?.lastName,
+  ]
+    .filter(Boolean)
+    .join(' ')
+    .trim();
+
+  return {
+    ...ticket,
+    customerName: fullName || user?.email || 'Unnamed User',
+    customerEmail: user?.email || '',
+    userRole: user?.role || '',
+  };
+}
 }

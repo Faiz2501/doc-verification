@@ -19,53 +19,34 @@ type TicketMessage = {
 
 type TicketRecord = {
   id: string;
+  userId: string;
   subject: string;
-  customerName: string;
-  customerEmail: string;
   issue: string;
   status: TicketStatus;
   createdAt?: string;
   updatedAt?: string;
   reply?: string | null;
   conversation?: TicketMessage[];
+  customerName?: string;
+  customerEmail?: string;
 };
 
 const FILTERS: Filter[] = ["All", "Open", "Closed"];
 
 function normalizeStatus(status?: string | null) {
   const value = (status ?? "").toUpperCase();
-
-  if (value === "IN_PROGRESS") return "IN_PROGRESS";
-  if (value === "RESOLVED") return "RESOLVED";
-  if (value === "CLOSED") return "CLOSED";
+  if (value === "CLOSED" || value === "RESOLVED") return "CLOSED";
   return "OPEN";
 }
 
 function statusLabel(status?: string | null) {
-  const value = normalizeStatus(status);
-
-  if (value === "IN_PROGRESS") return "In Progress";
-  if (value === "RESOLVED") return "Resolved";
-  if (value === "CLOSED") return "Closed";
-  return "Open";
+  return normalizeStatus(status) === "CLOSED" ? "Closed" : "Open";
 }
 
 function statusTone(status?: string | null) {
-  const value = normalizeStatus(status);
-
-  if (value === "IN_PROGRESS") {
-    return "border-amber-500/20 bg-amber-500/10 text-amber-300";
-  }
-
-  if (value === "RESOLVED") {
-    return "border-emerald-500/20 bg-emerald-500/10 text-emerald-300";
-  }
-
-  if (value === "CLOSED") {
-    return "border-slate-700 bg-slate-800 text-slate-300";
-  }
-
-  return "border-blue-500/20 bg-blue-500/10 text-blue-300";
+  return normalizeStatus(status) === "CLOSED"
+    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+    : "border-blue-500/20 bg-blue-500/10 text-blue-300";
 }
 
 function displayNameFromUser(user: {
@@ -106,39 +87,22 @@ function formatRelativeTime(dateLike?: string) {
 }
 
 function normalizeTicket(raw: any): TicketRecord {
-  const customer =
-    raw?.customer ??
-    raw?.user ??
-    raw?.createdBy ??
-    raw?.requester ??
-    {};
-
-  const customerName =
-    raw?.userName ||
-    raw?.displayName ||
-    raw?.name ||
-    displayNameFromUser({
-      firstName: customer?.firstName,
-      lastName: customer?.lastName,
-      name: customer?.name,
-      displayName: customer?.displayName,
-      email: customer?.email,
-    });
-
   return {
     id: String(raw?.id ?? raw?.ticketId ?? raw?.code ?? ""),
+    userId: String(
+      raw?.userId ??
+        raw?.user?.id ??
+        raw?.createdBy?.id ??
+        raw?.createdBy ??
+        raw?.requester?.id ??
+        ""
+    ),
     subject:
       raw?.subject ||
       raw?.title ||
       raw?.issueTitle ||
       raw?.topic ||
       "Untitled ticket",
-    customerName,
-    customerEmail:
-      raw?.userEmail ||
-      raw?.email ||
-      customer?.email ||
-      "",
     issue:
       raw?.issue ||
       raw?.message ||
@@ -198,7 +162,7 @@ export default function SupportTable() {
     const q = search.trim().toLowerCase();
 
     return tickets.filter((ticket) => {
-      const status = normalizeStatus(ticket.status);
+      const status = ticket.status?.toUpperCase() ?? "";
 
       const matchesSearch = [
         ticket.id,
@@ -287,9 +251,9 @@ export default function SupportTable() {
                   <p className="text-sm text-[var(--foreground-muted)]">
                     {ticket.id}
                   </p>
-                  <p className="pt-2 text-sm text-white/90">
-                    {ticket.customerName}
-                  </p>
+                  <p className="pt-2 text-sm text-white/90 line-clamp-2">
+  {ticket.issue}
+</p>
                 </div>
 
                 <div className="flex items-end gap-4 md:flex-col md:items-end">
@@ -317,9 +281,12 @@ export default function SupportTable() {
                 <p className="text-[var(--foreground-muted)]">
                   {ticket.customerName}
                 </p>
-                <p className="text-sm text-[var(--foreground-muted)]">
-                  {formatRelativeTime(ticket.createdAt)}
-                </p>
+                <p className="text-[var(--foreground-muted)]">
+  User ID: {ticket.userId || "—"}
+</p>
+<p className="text-sm text-[var(--foreground-muted)]">
+  {formatRelativeTime(ticket.createdAt)}
+</p>
               </div>
             </div>
           ))
