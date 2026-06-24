@@ -1,4 +1,7 @@
-import { Injectable } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
 
@@ -57,6 +60,114 @@ export class AdminService {
     };
   }
 
+  async getUsers() {
+    const users =
+      await this.prisma.user.findMany({
+        orderBy: {
+          createdAt: 'desc',
+        },
+        select: {
+          id: true,
+          email: true,
+          firstName: true,
+          lastName: true,
+          role: true,
+          createdAt: true,
+          updatedAt: true,
+          wallet: {
+            select: {
+              balance: true,
+            },
+          },
+          _count: {
+            select: {
+              apiKeys: true,
+              verifications: true,
+              transactions: true,
+              staffPermissions: true,
+            },
+          },
+        },
+      });
+
+    return users.map((user) => ({
+      id: user.id,
+      email: user.email,
+      firstName: user.firstName,
+      lastName: user.lastName,
+      role: user.role,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt,
+      walletBalance:
+        user.wallet?.balance || 0,
+      apiKeyCount: user._count.apiKeys,
+      verificationCount:
+        user._count.verifications,
+      transactionCount:
+        user._count.transactions,
+      permissionCount:
+        user._count.staffPermissions,
+    }));
+  }
+
+  async getUserDetail(userId: string) {
+    const user =
+      await this.prisma.user.findUnique({
+        where: {
+          id: userId,
+        },
+        include: {
+          wallet: true,
+          apiKeys: {
+            orderBy: {
+              createdAt: 'desc',
+            },
+          },
+          verifications: {
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 20,
+          },
+          transactions: {
+            orderBy: {
+              createdAt: 'desc',
+            },
+            take: 20,
+          },
+          staffPermissions: {
+            include: {
+              permission: true,
+            },
+          },
+        },
+      });
+
+    if (!user) {
+      throw new NotFoundException(
+        'User not found',
+      );
+    }
+
+    return {
+      ...user,
+      walletBalance:
+        user.wallet?.balance || 0,
+      activeApiKeys:
+        user.apiKeys.filter(
+          (key) => key.isActive,
+        ).length,
+      totalApiKeys: user.apiKeys.length,
+      totalVerifications:
+        user.verifications.length,
+      totalTransactions:
+        user.transactions.length,
+      permissions: user.staffPermissions.map(
+        (sp) => sp.permission.name,
+      ),
+    };
+  }
+
   async getRevenueAnalytics() {
     const credits =
       await this.prisma.walletTransaction.aggregate({
@@ -83,16 +194,12 @@ export class AdminService {
     return {
       totalCredits:
         credits._sum.amount || 0,
-
       totalCreditTransactions:
         credits._count,
-
       totalDebits:
         debits._sum.amount || 0,
-
       totalDebitTransactions:
         debits._count,
-
       profit:
         debits._sum.amount || 0,
     };

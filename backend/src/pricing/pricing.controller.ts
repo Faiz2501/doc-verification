@@ -1,7 +1,9 @@
 import {
   Controller,
   Get,
+  Post,
   Patch,
+  Delete,
   Param,
   Body,
   UseGuards,
@@ -30,6 +32,21 @@ export class PricingController {
 
   @UseGuards(PermissionGuard)
   @Permission('MANAGE_PRICING')
+  @Post()
+  createPricing(
+    @Body()
+    body: {
+      serviceName: string;
+      price: number;
+    },
+  ) {
+    return this.pricingService.createPricing(
+      body,
+    );
+  }
+
+  @UseGuards(PermissionGuard)
+  @Permission('MANAGE_PRICING')
   @Patch(':id')
   updatePricing(
     @Param('id') id: string,
@@ -38,6 +55,17 @@ export class PricingController {
     return this.pricingService.updatePricing(
       id,
       body.price,
+    );
+  }
+
+  @UseGuards(PermissionGuard)
+  @Permission('MANAGE_PRICING')
+  @Delete(':id')
+  deletePricing(
+    @Param('id') id: string,
+  ) {
+    return this.pricingService.deletePricing(
+      id,
     );
   }
 }

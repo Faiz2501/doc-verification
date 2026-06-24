@@ -4,6 +4,10 @@
 .env.*
 !.env.example
 
+# Database
+backup.sql
+*.sql
+
 # Node modules
 node_modules/
 **/node_modules/
