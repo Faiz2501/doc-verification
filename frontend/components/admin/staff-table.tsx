@@ -8,6 +8,8 @@ import StaffDetailsModal from "./staff-details-modal";
 type UserRecord = {
   id: string;
   name?: string | null;
+  firstName?: string | null;
+  lastName?: string | null;
   email: string;
   role: string;
   createdAt?: string;
@@ -29,6 +31,22 @@ function prettyRole(role?: string | null) {
 
 function formatMoney(value: number) {
   return `₹${new Intl.NumberFormat("en-IN").format(Number(value || 0))}`;
+}
+function getDisplayName(user: UserRecord) {
+  const fullName = [
+    user.firstName,
+    user.lastName,
+  ]
+    .filter(Boolean)
+    .join(" ")
+    .trim();
+
+  return (
+    fullName ||
+    user.name ||
+    user.email ||
+    "Unnamed User"
+  );
 }
 
 export default function StaffTable() {
@@ -67,11 +85,18 @@ export default function StaffTable() {
     const q = search.trim().toLowerCase();
 
     return users.filter((user) => {
+  if (
+    String(user.role).toUpperCase() ===
+    "SUPER_ADMIN"
+  ) {
+    return false;
+  }
       const role = normalizeRole(user.role);
 
       const matchesSearch =
-        `${user.name ?? ""} ${user.email}`.toLowerCase().includes(q);
-
+  `${getDisplayName(user)} ${user.email}`
+    .toLowerCase()
+    .includes(q);
       const matchesFilter =
         filter === "All" ||
         (filter === "User" && role === "DEVELOPER") ||
@@ -80,6 +105,8 @@ export default function StaffTable() {
       return matchesSearch && matchesFilter;
     });
   }, [users, search, filter]);
+
+  
 
   return (
     <section className="space-y-8">
@@ -164,7 +191,9 @@ export default function StaffTable() {
                     key={user.id}
                     className="border-b border-[var(--border)] hover:bg-[var(--hover-surface)]"
                   >
-                    <td className="p-5">{user.name || "Unnamed User"}</td>
+                    <td className="p-5">
+  {getDisplayName(user)}
+</td>
 
                     <td className="p-5 text-[var(--foreground-muted)]">
                       {user.email}
