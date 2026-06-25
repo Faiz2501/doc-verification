@@ -29,7 +29,12 @@ import ServicesToolbar from "@/components/services/services-toolbar";
 import ServiceFilters from "@/components/services/service-filters";
 import EmptyState from "@/components/services/empty-state";
 
-type ServiceMode = "single" | "driving-license" | "bank" | "pan-udyam" | "coming-soon";
+type ServiceMode =
+  | "single"
+  | "driving-license"
+  | "bank"
+  | "pan-udyam"
+  | "coming-soon";
 
 type ServiceItem = {
   name: string;
@@ -54,28 +59,53 @@ type DashboardPayload = {
   }>;
 };
 
+type PricingItem = {
+  id: string;
+  serviceName: string;
+  price: number;
+  isActive: boolean;
+  createdAt?: string;
+  updatedAt?: string;
+};
+
 export default function ServicesPage() {
   const [filter, setFilter] = useState("All");
   const [search, setSearch] = useState("");
   const [activeApiKey, setActiveApiKey] = useState("");
   const [loading, setLoading] = useState(true);
   const [pageError, setPageError] = useState("");
+  const [pricingMap, setPricingMap] = useState<
+    Record<string, PricingItem>
+  >({});
+
+  const getPrice = (
+    backendName: string,
+    fallback: number
+  ) => {
+    return (
+      pricingMap[backendName]?.price ??
+      fallback
+    );
+  };
 
   const identityServices: ServiceItem[] = [
     {
       name: "Aadhaar OTP",
-      description: "Verify Aadhaar identity using OTP authentication.",
-      price: 0.75,
+      description:
+        "Verify Aadhaar identity using OTP authentication.",
+      price: getPrice("AADHAAR_OTP", 0.75),
       status: "active",
       icon: <Fingerprint size={20} />,
       available: false,
       mode: "coming-soon",
-      comingSoonCopy: "Aadhaar OTP is still warming up. Check back soon.",
+      comingSoonCopy:
+        "Aadhaar OTP is still warming up. Check back soon.",
     },
     {
       name: "PAN",
-      description: "Instant PAN verification and validation.",
-      price: 1.2,
+      description:
+        "Instant PAN verification and validation.",
+      price: getPrice("PAN_VERIFY", 1.2),
       status: "active",
       icon: <CreditCard size={20} />,
       available: true,
@@ -87,8 +117,9 @@ export default function ServicesPage() {
     },
     {
       name: "PAN 360",
-      description: "Comprehensive PAN intelligence profile.",
-      price: 4.5,
+      description:
+        "Comprehensive PAN intelligence profile.",
+      price: getPrice("PAN_360", 4.5),
       status: "beta",
       icon: <IdCard size={20} />,
       available: true,
@@ -101,17 +132,19 @@ export default function ServicesPage() {
     {
       name: "Passport",
       description: "Government passport verification.",
-      price: 8,
+      price: getPrice("PASSPORT", 8),
       status: "live",
       icon: <Globe size={20} />,
       available: false,
       mode: "coming-soon",
-      comingSoonCopy: "Passport verification is in the suitcase, not on the runway yet.",
+      comingSoonCopy:
+        "Passport verification is in the suitcase, not on the runway yet.",
     },
     {
       name: "Driving License",
-      description: "Verify driving licence information.",
-      price: 2,
+      description:
+        "Verify driving licence information.",
+      price: getPrice("DRIVING_LICENSE", 2),
       status: "active",
       icon: <IdCard size={20} />,
       available: true,
@@ -122,8 +155,9 @@ export default function ServicesPage() {
     },
     {
       name: "Voter ID",
-      description: "Instant voter ID validation service.",
-      price: 1.5,
+      description:
+        "Instant voter ID validation service.",
+      price: getPrice("VOTER_ID", 1.5),
       status: "active",
       icon: <IdCard size={20} />,
       available: true,
@@ -135,21 +169,24 @@ export default function ServicesPage() {
     },
     {
       name: "DigiLocker",
-      description: "Fetch verified Aadhaar documents.",
-      price: 3,
+      description:
+        "Fetch verified Aadhaar documents.",
+      price: getPrice("DIGILOCKER", 3),
       status: "beta",
       icon: <Fingerprint size={20} />,
       available: false,
       mode: "coming-soon",
-      comingSoonCopy: "DigiLocker is still doing pushups backstage.",
+      comingSoonCopy:
+        "DigiLocker is still doing pushups backstage.",
     },
   ];
 
   const businessServices: ServiceItem[] = [
     {
       name: "GSTIN",
-      description: "GST registration verification.",
-      price: 1,
+      description:
+        "GST registration verification.",
+      price: getPrice("GST_VERIFY", 1),
       status: "active",
       icon: <Building size={20} />,
       available: true,
@@ -161,8 +198,9 @@ export default function ServicesPage() {
     },
     {
       name: "PAN To GSTIN",
-      description: "Discover GSTINs associated with PAN.",
-      price: 2,
+      description:
+        "Discover GSTINs associated with PAN.",
+      price: getPrice("PAN_TO_GSTIN", 2),
       status: "active",
       icon: <Link size={20} />,
       available: true,
@@ -174,8 +212,9 @@ export default function ServicesPage() {
     },
     {
       name: "CIN Lookup",
-      description: "Ministry of Corporate Affairs lookup.",
-      price: 4,
+      description:
+        "Ministry of Corporate Affairs lookup.",
+      price: getPrice("CIN_LOOKUP", 4),
       status: "live",
       icon: <Search size={20} />,
       available: true,
@@ -187,8 +226,9 @@ export default function ServicesPage() {
     },
     {
       name: "UDYAM",
-      description: "Verify MSME registration details.",
-      price: 2.5,
+      description:
+        "Verify MSME registration details.",
+      price: getPrice("UDYAM", 2.5),
       status: "active",
       icon: <Building2 size={20} />,
       available: true,
@@ -200,8 +240,9 @@ export default function ServicesPage() {
     },
     {
       name: "PAN To UDYAM",
-      description: "Reverse lookup UDYAM records.",
-      price: 3,
+      description:
+        "Reverse lookup UDYAM records.",
+      price: getPrice("PAN_TO_UDYAM", 3),
       status: "beta",
       icon: <ArrowLeftRight size={20} />,
       available: true,
@@ -214,41 +255,48 @@ export default function ServicesPage() {
   const faceServices: ServiceItem[] = [
     {
       name: "Face Match",
-      description: "AI powered facial identity matching.",
-      price: 1.5,
+      description:
+        "AI powered facial identity matching.",
+      price: getPrice("FACE_MATCH", 1.5),
       status: "live",
       icon: <ScanFace size={20} />,
       available: false,
       mode: "coming-soon",
-      comingSoonCopy: "Face Match is still getting its sunglasses on.",
+      comingSoonCopy:
+        "Face Match is still getting its sunglasses on.",
     },
     {
       name: "Face Liveness",
-      description: "Detect spoofing and fake identities.",
-      price: 6,
+      description:
+        "Detect spoofing and fake identities.",
+      price: getPrice("FACE_LIVENESS", 6),
       status: "beta",
       icon: <Camera size={20} />,
       available: false,
       mode: "coming-soon",
-      comingSoonCopy: "Face Liveness is in the lab doing secret agent work.",
+      comingSoonCopy:
+        "Face Liveness is in the lab doing secret agent work.",
     },
     {
       name: "Name Match",
-      description: "Fuzzy name verification engine.",
-      price: 0.5,
+      description:
+        "Fuzzy name verification engine.",
+      price: getPrice("NAME_MATCH", 0.5),
       status: "active",
       icon: <Type size={20} />,
       available: false,
       mode: "coming-soon",
-      comingSoonCopy: "Name Match is still learning the alphabet in style.",
+      comingSoonCopy:
+        "Name Match is still learning the alphabet in style.",
     },
   ];
 
   const utilityServices: ServiceItem[] = [
     {
       name: "Vehicle RC",
-      description: "Vehicle registration lookup.",
-      price: 1.5,
+      description:
+        "Vehicle registration lookup.",
+      price: getPrice("VEHICLE_RC", 1.5),
       status: "active",
       icon: <Car size={20} />,
       available: true,
@@ -260,18 +308,21 @@ export default function ServicesPage() {
     },
     {
       name: "Reverse Geocode",
-      description: "Convert coordinates into addresses.",
-      price: 0.8,
+      description:
+        "Convert coordinates into addresses.",
+      price: getPrice("REVERSE_GEOCODE", 0.8),
       status: "live",
       icon: <MapPin size={20} />,
       available: false,
       mode: "coming-soon",
-      comingSoonCopy: "Reverse Geocode is still trying to remember directions.",
+      comingSoonCopy:
+        "Reverse Geocode is still trying to remember directions.",
     },
     {
       name: "Number Lookup",
-      description: "Telecom operator and circle lookup.",
-      price: 0.4,
+      description:
+        "Telecom operator and circle lookup.",
+      price: getPrice("NUMBER_LOOKUP", 0.4),
       status: "active",
       icon: <Phone size={20} />,
       available: true,
@@ -286,8 +337,9 @@ export default function ServicesPage() {
   const financialServices: ServiceItem[] = [
     {
       name: "Penny Drop",
-      description: "Bank account ownership verification.",
-      price: 2,
+      description:
+        "Bank account ownership verification.",
+      price: getPrice("PENNY_DROP", 2),
       status: "live",
       icon: <Wallet size={20} />,
       available: true,
@@ -297,13 +349,15 @@ export default function ServicesPage() {
     },
     {
       name: "Employment 360",
-      description: "Employment background intelligence.",
-      price: 12,
+      description:
+        "Employment background intelligence.",
+      price: getPrice("EMPLOYMENT_360", 12),
       status: "beta",
       icon: <Briefcase size={20} />,
       available: false,
       mode: "coming-soon",
-      comingSoonCopy: "Employment 360 is still in its interview round.",
+      comingSoonCopy:
+        "Employment 360 is still in its interview round.",
     },
   ];
 
@@ -316,11 +370,31 @@ export default function ServicesPage() {
         const meResponse = await api.get("/users/me");
         const me = meResponse.data as { id: string };
 
-        const dashboardResponse = await api.get(`/dashboard/${me.id}`);
-        const dashboard = dashboardResponse.data as DashboardPayload;
+        const [dashboardResponse, pricingResponse] =
+          await Promise.all([
+            api.get(`/dashboard/${me.id}`),
+            api.get("/pricing"),
+          ]);
+
+        const dashboard =
+          dashboardResponse.data as DashboardPayload;
+
+        const pricingItems =
+          pricingResponse.data?.value ??
+          pricingResponse.data ??
+          [];
+
+        const map: Record<string, PricingItem> = {};
+
+        (pricingItems as PricingItem[]).forEach((item) => {
+          map[item.serviceName] = item;
+        });
+
+        setPricingMap(map);
 
         setActiveApiKey(
-          dashboard.apiKeys?.find((k) => k.isActive)?.apiKey ?? ""
+          dashboard.apiKeys?.find((k) => k.isActive)
+            ?.apiKey ?? ""
         );
       } catch (err: any) {
         console.error(err);
@@ -337,35 +411,50 @@ export default function ServicesPage() {
     void load();
   }, []);
 
-  const matchesFilter = (_status: string, available: boolean) => {
-  if (filter === "All") return true;
+  const matchesFilter = (
+    _status: string,
+    available: boolean
+  ) => {
+    if (filter === "All") return true;
 
-  if (filter === "Active") {
-    return available;
-  }
+    if (filter === "Active") {
+      return available;
+    }
 
-  if (filter === "Inactive") {
-    return !available;
-  }
+    if (filter === "Inactive") {
+      return !available;
+    }
 
-  return true;
-};
+    return true;
+  };
 
   const filterServices = (services: ServiceItem[]) =>
     services.filter((service) => {
-      const searchMatch = service.name.toLowerCase().includes(search.toLowerCase());
+      const searchMatch = service.name
+        .toLowerCase()
+        .includes(search.toLowerCase());
+
       const statusMatch = matchesFilter(
-  service.status,
-  service.available
-);
+        service.status,
+        service.available
+      );
+
       return searchMatch && statusMatch;
     });
 
-  const filteredIdentity = filterServices(identityServices);
-  const filteredBusiness = filterServices(businessServices);
+  const filteredIdentity = filterServices(
+    identityServices
+  );
+  const filteredBusiness = filterServices(
+    businessServices
+  );
   const filteredFace = filterServices(faceServices);
-  const filteredUtility = filterServices(utilityServices);
-  const filteredFinancial = filterServices(financialServices);
+  const filteredUtility = filterServices(
+    utilityServices
+  );
+  const filteredFinancial = filterServices(
+    financialServices
+  );
 
   const totalResults =
     filteredIdentity.length +
@@ -378,7 +467,10 @@ export default function ServicesPage() {
 
   return (
     <div className="p-6">
-      <ServicesToolbar search={search} onSearch={setSearch} />
+      <ServicesToolbar
+        search={search}
+        onSearch={setSearch}
+      />
 
       <div className="mb-6 flex gap-8 text-sm text-slate-500">
         <span>{totalResults} endpoints</span>
@@ -391,7 +483,10 @@ export default function ServicesPage() {
         </div>
       )}
 
-      <ServiceFilters selected={filter} onSelect={setFilter} />
+      <ServiceFilters
+        selected={filter}
+        onSelect={setFilter}
+      />
 
       {loading ? (
         <div className="rounded-2xl border border-[var(--border)] bg-[var(--surface)] p-8 text-[var(--foreground-muted)]">

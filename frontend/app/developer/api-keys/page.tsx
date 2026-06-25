@@ -303,11 +303,12 @@ export default function ApiKeysPage() {
       rzp.open();
     } catch (err: any) {
       console.error(err);
-      setError(
+      setToastMessage(
         err?.response?.data?.message ||
           err?.message ||
           "Failed to start wallet recharge."
       );
+      setToastOpen(true);
     } finally {
       setBusy(false);
     }
@@ -340,12 +341,6 @@ export default function ApiKeysPage() {
           Manage authentication credentials and billing.
         </p>
       </div>
-
-      {error && (
-        <div className="mb-6 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-          {error}
-        </div>
-      )}
 
       <div className="rounded-xl border border-slate-800 bg-[#0b1d31] p-6">
         <div className="mb-6 flex items-center justify-between">

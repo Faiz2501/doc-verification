@@ -56,17 +56,15 @@ export default function ApiKeyCard({
             </span>
           </div>
 
-          <div className="mt-3 space-y-1 text-sm text-slate-400">
+          <div className="mt-3 text-sm text-slate-400">
             <p>Created: {createdAt}</p>
-            <p>Last Used: 2 minutes ago</p>
-            <p>Requests Today: 1,284</p>
           </div>
 
           <div className="mt-4 rounded-md bg-[#061423] px-3 py-2 font-mono text-sm text-slate-300">
             {visible ? keyValue : "••••••••••••••••••••••"}
           </div>
 
-          <p className="mt-2 text-xs text-slate-500">Created: {createdAt}</p>
+          
         </div>
 
         <div className="flex gap-3">

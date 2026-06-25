@@ -85,20 +85,17 @@ function formatTimestamp(value: string) {
 
 export default function Overview() {
   const [loading, setLoading] = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState("");
-  const [user, setUser] = useState<MeUser | null>(null);
   const [dashboard, setDashboard] = useState<DashboardData | null>(null);
   const [history, setHistory] = useState<HistoryRow[]>([]);
 
   const load = async () => {
     try {
       setError("");
-      setRefreshing(true);
+      setLoading(true);
 
       const meResponse = await api.get("/users/me");
       const me = meResponse.data as MeUser;
-      setUser(me);
 
       const [dashboardResponse, historyResponse] = await Promise.all([
         api.get(`/dashboard/${me.id}`),
@@ -116,7 +113,6 @@ export default function Overview() {
       );
     } finally {
       setLoading(false);
-      setRefreshing(false);
     }
   };
 
@@ -143,7 +139,8 @@ export default function Overview() {
       );
     }).length;
 
-    const successRate = total > 0 ? Math.round((success / total) * 1000) / 10 : 0;
+    const successRate =
+      total > 0 ? Math.round((success / total) * 1000) / 10 : 0;
 
     const topServices = Object.entries(
       history.reduce<Record<string, number>>((acc, item) => {
@@ -193,57 +190,27 @@ export default function Overview() {
   }, [history]);
 
   const walletBalance =
-    dashboard?.walletBalance ??
-    dashboard?.wallet?.balance ??
-    0;
+    dashboard?.walletBalance ?? dashboard?.wallet?.balance ?? 0;
 
   const activeApiKey =
     dashboard?.activeApiKey ??
     dashboard?.apiKeys?.find((k) => k.isActive)?.apiKey ??
     null;
 
-  const totalRequests =
-    dashboard?.totalRequests ?? summary.total;
-
-  const successfulRequests =
-    dashboard?.successfulRequests ?? summary.success;
-
-  const failedRequests =
-    dashboard?.failedRequests ?? summary.failed;
-
-  const totalSpent =
-    dashboard?.totalSpent ?? 0;
+  const totalRequests = dashboard?.totalRequests ?? summary.total;
+  const successfulRequests = dashboard?.successfulRequests ?? summary.success;
+  const failedRequests = dashboard?.failedRequests ?? summary.failed;
+  const totalSpent = dashboard?.totalSpent ?? 0;
 
   return (
-    <section className="space-y-10">
-      <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between mb-6">
+    <section className="mb-8">
         <div>
           <h1 className="text-4xl font-bold">Overview</h1>
 
-          <p className="text-[var(--foreground-muted)] mt-2 max-w-2xl">
-            Real-time metrics for your production environment.
+          <p className="mt-2 mb-6 max-w-2xl text-[var(--foreground-muted)]">
+            Monitor your API usage, wallet balance, and verification activity in one place.
           </p>
         </div>
-
-        <button
-          className="
-            flex
-            items-center
-            gap-4
-            px-5
-            py-3
-            rounded-[14px]
-            bg-[var(--surface)]
-            border
-            border-[var(--border)]
-            hover:bg-[var(--hover-surface)]
-            transition-all
-          "
-        >
-          <Download size={16} />
-          Export Report
-        </button>
-      </div>
 
       {error && (
         <div className="rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
@@ -257,7 +224,7 @@ export default function Overview() {
         </div>
       ) : (
         <>
-          <div className="grid grid-cols-1 gap-4 xl:grid-cols-12 mb-10">
+          <div className="mb-10 grid grid-cols-1 gap-4 xl:grid-cols-12">
             <div className="col-span-1.5 xl:col-span-6">
               <MetricCard
                 title="Wallet Balance"
@@ -312,53 +279,21 @@ export default function Overview() {
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-4 mt-6">
+          <div className="mt-6 grid grid-cols-2 gap-4">
             <UsageChart data={summary.usageData} />
-            <ServiceChart rows={summary.topServices.map(item => ({
-              id: item.serviceName,
-              serviceName: item.serviceName,
-              amount: item.count,
-              status: "SUCCESS" as const,
-              createdAt: new Date().toISOString(),
-            }))} />
+
+            <ServiceChart
+              rows={summary.topServices.map((item) => ({
+                id: item.serviceName,
+                serviceName: item.serviceName,
+                amount: item.count,
+                status: "SUCCESS" as const,
+                createdAt: new Date().toISOString(),
+              }))}
+            />
           </div>
 
           <div className="mt-6">
-            <div className="mb-4 rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <h3 className="text-xl font-semibold tracking-[-0.03em]">
-                    Top Services
-                  </h3>
-                  <p className="mt-1 text-sm text-[var(--foreground-muted)]">
-                    Based on your verification history.
-                  </p>
-                </div>
-              </div>
-
-              <div className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
-                {summary.topServices.length === 0 ? (
-                  <div className="rounded-[8px] border border-dashed border-[var(--border)] p-6 text-[var(--foreground-muted)] md:col-span-2 xl:col-span-4">
-                    No verification activity yet.
-                  </div>
-                ) : (
-                  summary.topServices.map((item) => (
-                    <div
-                      key={item.serviceName}
-                      className="rounded-[8px] border border-[var(--border)] bg-[var(--surface-card)] p-4"
-                    >
-                      <p className="text-sm text-[var(--foreground-muted)]">
-                        {prettyServiceName(item.serviceName)}
-                      </p>
-                      <p className="mt-2 text-2xl font-semibold text-white">
-                        {item.count}
-                      </p>
-                    </div>
-                  ))
-                )}
-              </div>
-            </div>
-
             <RecentRequests rows={summary.recentRows} />
           </div>
         </>

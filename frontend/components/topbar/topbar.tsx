@@ -11,7 +11,7 @@ export default function Topbar() {
     ? "Admin Portal"
     : pathname.startsWith("/staff")
     ? "Staff Portal"
-    : "Developer Portal";
+    : "Customer Portal";
 
   return (
     <header
