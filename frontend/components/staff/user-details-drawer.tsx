@@ -193,8 +193,8 @@ export default function UserDetailsDrawer({
             </p>
 
             <h2 className="mt-2 text-3xl font-semibold text-white">
-              {displayName(user)}
-            </h2>
+  {displayName(user ?? undefined)}
+</h2>
 
             <p className="mt-2 text-slate-400">{user?.email ?? "Loading..."}</p>
 
@@ -234,47 +234,45 @@ export default function UserDetailsDrawer({
         ) : (
           <div className="mt-8 space-y-6">
             <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
-              <div className="rounded-2xl border border-[var(--border)] bg-[#020d1b] p-4">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--foreground-muted)]">
+              <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-slate-800 bg-[#020d1b] p-5 text-center">  <p className="text-center text-[11px] font-medium uppercase tracking-[0.12em] text-slate-400 leading-5">
                   Wallet Balance
                 </p>
-                <p className="mt-3 text-2xl font-semibold text-white">
+                <p className="mt-2 text-4xl font-bold text-white">
                   {formatMoney(walletBalance || user?.wallet?.balance || 0)}
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-[var(--border)] bg-[#020d1b] p-4">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--foreground-muted)]">
+              <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-slate-800 bg-[#020d1b] p-5 text-center">  <p className="text-center text-[11px] font-medium uppercase tracking-[0.12em] text-slate-400 leading-5">
                   API Keys
                 </p>
-                <p className="mt-3 text-2xl font-semibold text-white">
+                <p className="mt-2 text-4xl font-bold text-white">
                   {user?.totalApiKeys ?? apiKeys.length ?? 0}
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-[var(--border)] bg-[#020d1b] p-4">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--foreground-muted)]">
-                  Verifications
+              <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-slate-800 bg-[#020d1b] p-5 text-center">
+                  <p className="text-center text-[11px] font-medium uppercase tracking-[0.12em] text-slate-400 leading-5">    
+              Verifications
                 </p>
-                <p className="mt-3 text-2xl font-semibold text-white">
+                <p className="mt-2 text-4xl font-bold text-white">
                   {user?.totalVerifications ?? verificationHistory.length ?? 0}
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-[var(--border)] bg-[#020d1b] p-4">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--foreground-muted)]">
-                  Transactions
+              <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-slate-800 bg-[#020d1b] p-5 text-center">
+                  <p className="text-center text-[11px] font-medium uppercase tracking-[0.12em] text-slate-400 leading-5">
+                      Transactions
                 </p>
-                <p className="mt-3 text-2xl font-semibold text-white">
+                <p className="mt-2 text-4xl font-bold text-white">
                   {user?.totalTransactions ?? walletTransactions.length ?? 0}
                 </p>
               </div>
 
-              <div className="rounded-2xl border border-[var(--border)] bg-[#020d1b] p-4">
-                <p className="text-[11px] uppercase tracking-[0.2em] text-[var(--foreground-muted)]">
-                  Permissions
+              <div className="flex h-full flex-col items-center justify-center rounded-2xl border border-slate-800 bg-[#020d1b] p-5 text-center">
+                  <p className="text-center text-[11px] font-medium uppercase tracking-[0.12em] text-slate-400 leading-5">
+                      Permissions
                 </p>
-                <p className="mt-3 text-2xl font-semibold text-white">
+                <p className="mt-2 text-4xl font-bold text-white">
                   {permissions.length}
                 </p>
               </div>

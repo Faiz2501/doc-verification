@@ -82,21 +82,16 @@ export default function StaffTable() {
   }, []);
 
   const filteredUsers = useMemo(() => {
-    const q = search.trim().toLowerCase();
+  const q = search.trim().toLowerCase();
 
-    return users.filter((user) => {
-  if (
-    String(user.role).toUpperCase() ===
-    "SUPER_ADMIN"
-  ) {
-    return false;
-  }
+  return users
+    .filter((user) => String(user.role).toUpperCase() !== "SUPER_ADMIN")
+    .filter((user) => {
       const role = normalizeRole(user.role);
 
       const matchesSearch =
-  `${getDisplayName(user)} ${user.email}`
-    .toLowerCase()
-    .includes(q);
+        `${user.name ?? ""} ${user.email}`.toLowerCase().includes(q);
+
       const matchesFilter =
         filter === "All" ||
         (filter === "User" && role === "DEVELOPER") ||
@@ -104,7 +99,7 @@ export default function StaffTable() {
 
       return matchesSearch && matchesFilter;
     });
-  }, [users, search, filter]);
+}, [users, search, filter]);
 
   
 

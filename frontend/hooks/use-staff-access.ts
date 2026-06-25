@@ -5,15 +5,7 @@ import api from "@/lib/api/axios";
 import { getStoredUser, type AuthUser } from "@/lib/auth/auth";
 import type { StaffPermission } from "@/config/staff-permissions";
 
-type PermissionAssignment = {
-  user: {
-    id: string;
-  };
-  permission: {
-    id: string;
-    name: string;
-  };
-};
+
 
 type StaffAccess = {
   loading: boolean;
@@ -49,22 +41,22 @@ export function useStaffAccess(enabled = true): StaffAccess {
 
         setUser(me);
 
-        if (me.role !== "staff") {
-          setPermissions([]);
-          return;
-        }
+        const role = String(me.role).toUpperCase();
 
-        const assignmentsResponse = await api.get("/permissions/assignments");
-        const assignments = Array.isArray(assignmentsResponse.data)
-          ? (assignmentsResponse.data as PermissionAssignment[])
-          : [];
+if (String(me.role).toUpperCase() !== "STAFF") {
+  setPermissions([]);
+  return;
+}
 
-        const currentPermissions = assignments
-          .filter((item) => item?.user?.id === me.id)
-          .map((item) => item?.permission?.name)
-          .filter(Boolean) as string[];
+const currentPermissions = Array.isArray((me as any).permissions)
+  ? ((me as any).permissions as string[])
+  : Array.isArray((me as any).staffPermissions)
+    ? (me as any).staffPermissions
+        .map((p: any) => p?.permission?.name)
+        .filter(Boolean)
+    : [];
 
-        setPermissions(Array.from(new Set(currentPermissions)));
+setPermissions(Array.from(new Set(currentPermissions)));
       } catch (err: any) {
         console.error(err);
         setError(

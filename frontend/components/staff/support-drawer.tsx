@@ -3,13 +3,13 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2, Trash2, X } from "lucide-react";
 import api from "@/lib/api/axios";
+import { useStaffAccess } from "@/hooks/use-staff-access";
 import {
   formatDateTime,
   normalizeSupportStatus,
   supportStatusLabel,
   supportStatusTone,
 } from "@/lib/staff/utils";
-
 type Props = {
   open: boolean;
   ticketId: string | null;
@@ -32,17 +32,31 @@ type Ticket = {
 
 const STATUS_OPTIONS = [
   "OPEN",
-  "IN_PROGRESS",
-  "RESOLVED",
   "CLOSED",
 ] as const;
+function compactSupportStatus(status?: string | null) {
+  const value = String(status ?? "").toUpperCase();
+  return value === "CLOSED" || value === "RESOLVED" ? "CLOSED" : "OPEN";
+}
 
+function compactSupportStatusLabel(status?: string | null) {
+  return compactSupportStatus(status) === "CLOSED" ? "Closed" : "Open";
+}
+
+function compactSupportStatusTone(status?: string | null) {
+  return compactSupportStatus(status) === "CLOSED"
+    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+    : "border-blue-500/20 bg-blue-500/10 text-blue-300";
+}
 export default function SupportDrawer({
   open,
   ticketId,
   onClose,
   onSaved,
 }: Props) {
+  const access = useStaffAccess(true);
+  const canManageSupport = access.hasPermission("MANAGE_SUPPORT");
+
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(false);
   const [savingStatus, setSavingStatus] = useState(false);
@@ -165,13 +179,13 @@ export default function SupportDrawer({
       setError("");
 
       await api.patch(`/support/${ticketId}/reply`, {
-        reply: cleanReply,
-        status: "RESOLVED",
-      });
+  reply: cleanReply,
+  status: "CLOSED",
+});
 
-      setTicket((prev) =>
-        prev ? { ...prev, reply: cleanReply, status: "RESOLVED" } : prev,
-      );
+setTicket((prev) =>
+  prev ? { ...prev, reply: cleanReply, status: "CLOSED" } : prev,
+);
       setReply(cleanReply);
       onSaved?.();
     } catch (err: any) {
@@ -233,12 +247,12 @@ export default function SupportDrawer({
 
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <span
-                className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.16em] ${supportStatusTone(
-                  ticket?.status,
-                )}`}
-              >
-                {supportStatusLabel(ticket?.status)}
-              </span>
+  className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.16em] ${compactSupportStatusTone(
+    ticket?.status,
+  )}`}
+>
+  {compactSupportStatusLabel(ticket?.status)}
+</span>
 
               <span className="text-sm text-slate-500">
                 ID {ticket?.id ? ticket.id.slice(0, 8) : "—"}
@@ -314,19 +328,24 @@ export default function SupportDrawer({
 
               <div className="mt-4 grid grid-cols-2 gap-3">
                 {STATUS_OPTIONS.map((status) => (
-                  <button
-                    key={status}
-                    onClick={() => void updateStatus(status)}
-                    disabled={savingStatus}
-                    className={`rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
-                      normalizeSupportStatus(ticket?.status) === status
-                        ? "border-blue-500 bg-blue-600 text-white"
-                        : "border-slate-700 text-slate-300 hover:bg-[var(--hover-surface)]"
-                    }`}
-                  >
-                    {supportStatusLabel(status)}
-                  </button>
-                ))}
+  <button
+    key={status}
+    onClick={() => {
+      if (!canManageSupport) return;
+      void updateStatus(status);
+    }}
+    disabled={savingStatus || !canManageSupport}
+    className={`rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+      !canManageSupport
+        ? "cursor-not-allowed border-slate-800 bg-slate-900 text-slate-500"
+        : normalizeSupportStatus(ticket?.status) === status
+        ? "border-blue-500 bg-blue-600 text-white"
+        : "border-slate-700 text-slate-300 hover:bg-[var(--hover-surface)]"
+    }`}
+  >
+    {supportStatusLabel(status)}
+  </button>
+))}
               </div>
             </section>
 
@@ -337,65 +356,57 @@ export default function SupportDrawer({
               </div>
 
               <textarea
-                value={reply}
-                onChange={(e) => setReply(e.target.value)}
-                placeholder="Write a support reply..."
-                className="
-                mt-4
-                min-h-[150px]
-                w-full
-                rounded-2xl
-                border
-                border-slate-800
-                bg-[#020d1b]
-                p-4
-                outline-none
-                "
-              />
+  value={reply}
+  onChange={(e) => setReply(e.target.value)}
+  placeholder="Write a support reply..."
+  disabled={!canManageSupport}
+  className={`
+    mt-4
+    min-h-[150px]
+    w-full
+    rounded-2xl
+    border
+    p-4
+    outline-none
+    ${
+      canManageSupport
+        ? "border-slate-800 bg-[#020d1b] text-white"
+        : "cursor-not-allowed border-slate-800 bg-slate-900 text-slate-500"
+    }
+  `}
+/>
 
               <div className="mt-5 flex items-center justify-between gap-3">
                 <button
-                  onClick={deleteTicket}
-                  disabled={deleting}
-                  className="
-                  inline-flex
-                  items-center
-                  gap-2
-                  rounded-xl
-                  border
-                  border-red-500/20
-                  bg-red-500/5
-                  px-4
-                  py-3
-                  text-sm
-                  font-medium
-                  text-red-300
-                  transition-all
-                  hover:border-red-500/40
-                  hover:bg-red-500/15
-                  "
-                >
-                  <Trash2 size={16} />
-                  Delete
-                </button>
+  onClick={() => {
+    if (!canManageSupport) return;
+    void deleteTicket();
+  }}
+  disabled={deleting || !canManageSupport}
+  className={`inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+    canManageSupport
+      ? "border-red-500/20 bg-red-500/5 text-red-300 hover:border-red-500/40 hover:bg-red-500/15"
+      : "cursor-not-allowed border-slate-800 bg-slate-900 text-slate-500"
+  }`}
+>
+  <Trash2 size={16} />
+  Delete
+</button>
 
                 <button
-                  onClick={sendReply}
-                  disabled={sendingReply}
-                  className="
-                  rounded-xl
-                  bg-blue-600
-                  px-5
-                  py-3
-                  text-sm
-                  font-medium
-                  text-white
-                  transition-all
-                  hover:bg-blue-500
-                  "
-                >
-                  {sendingReply ? "Sending..." : "Send Reply"}
-                </button>
+  onClick={() => {
+    if (!canManageSupport) return;
+    void sendReply();
+  }}
+  disabled={sendingReply || !canManageSupport}
+  className={`rounded-xl px-5 py-3 text-sm font-medium transition-all ${
+    canManageSupport
+      ? "bg-blue-600 text-white hover:bg-blue-500"
+      : "cursor-not-allowed bg-slate-700 text-slate-400"
+  }`}
+>
+  {sendingReply ? "Sending..." : "Send Reply"}
+</button>
               </div>
             </section>
           </div>

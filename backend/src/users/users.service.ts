@@ -13,20 +13,43 @@ export class UsersService {
   ) {}
 
   async getProfile(userId: string) {
-    return this.prisma.user.findUnique({
-      where: {
-        id: userId,
+  const user = await this.prisma.user.findUnique({
+    where: {
+      id: userId,
+    },
+    select: {
+      id: true,
+      email: true,
+      firstName: true,
+      lastName: true,
+      role: true,
+      createdAt: true,
+      staffPermissions: {
+        include: {
+          permission: {
+            select: {
+              id: true,
+              name: true,
+            },
+          },
+        },
       },
-      select: {
-        id: true,
-        email: true,
-        firstName: true,
-        lastName: true,
-        role: true,
-        createdAt: true,
-      },
-    });
+    },
+  });
+
+  if (!user) {
+    throw new NotFoundException('User not found');
   }
+
+  const permissions = user.staffPermissions.map(
+    (sp) => sp.permission.name,
+  );
+
+  return {
+    ...user,
+    permissions,
+  };
+}
 
   async updateProfile(
     userId: string,

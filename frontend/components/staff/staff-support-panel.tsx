@@ -11,9 +11,6 @@ import {
   displayName,
   formatDateTime,
   isToday,
-  normalizeSupportStatus,
-  supportStatusLabel,
-  supportStatusTone,
 } from "@/lib/staff/utils";
 
 type SupportTicket = {
@@ -28,8 +25,7 @@ type SupportTicket = {
   customerEmail?: string;
   userRole?: string;
 };
-
-const FILTERS = ["All", "Open", "Closed", "Resolved"] as const;
+const FILTERS = ["All", "Open", "Closed"] as const;
 
 function normalizeTicket(raw: any): SupportTicket {
   return {
@@ -44,6 +40,20 @@ function normalizeTicket(raw: any): SupportTicket {
     customerEmail: raw?.customerEmail,
     userRole: raw?.userRole,
   };
+}
+function compactSupportStatus(status?: string | null) {
+  const value = String(status ?? "").toUpperCase();
+  return value === "CLOSED" || value === "RESOLVED" ? "CLOSED" : "OPEN";
+}
+
+function compactSupportStatusLabel(status?: string | null) {
+  return compactSupportStatus(status) === "CLOSED" ? "Closed" : "Open";
+}
+
+function compactSupportStatusTone(status?: string | null) {
+  return compactSupportStatus(status) === "CLOSED"
+    ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
+    : "border-blue-500/20 bg-blue-500/10 text-blue-300";
 }
 
 export default function StaffSupportPanel() {
@@ -98,25 +108,24 @@ export default function StaffSupportPanel() {
     const q = search.trim().toLowerCase();
 
     return tickets.filter((ticket) => {
-      const status = normalizeSupportStatus(ticket.status);
+      const status = compactSupportStatus(ticket.status);
 
-      const searchMatch = [
-        ticket.id,
-        ticket.customerName,
-        ticket.customerEmail,
-        ticket.subject,
-        ticket.message,
-        ticket.reply,
-      ]
-        .join(" ")
-        .toLowerCase()
-        .includes(q);
+const searchMatch = [
+  ticket.id,
+  ticket.customerName,
+  ticket.customerEmail,
+  ticket.subject,
+  ticket.message,
+  ticket.reply,
+]
+  .join(" ")
+  .toLowerCase()
+  .includes(q);
 
-      const filterMatch =
-        filter === "All" ||
-        (filter === "Open" && (status === "OPEN" || status === "IN_PROGRESS")) ||
-        (filter === "Closed" && status === "CLOSED") ||
-        (filter === "Resolved" && status === "RESOLVED");
+const filterMatch =
+  filter === "All" ||
+  (filter === "Open" && status === "OPEN") ||
+  (filter === "Closed" && status === "CLOSED");
 
       return searchMatch && filterMatch;
     });
@@ -140,27 +149,21 @@ export default function StaffSupportPanel() {
     );
   }
 
-  const openCount = tickets.filter((ticket) => {
-    const status = normalizeSupportStatus(ticket.status);
-    return status === "OPEN" || status === "IN_PROGRESS";
-  }).length;
+  const openCount = tickets.filter(
+  (ticket) => compactSupportStatus(ticket.status) === "OPEN",
+).length;
 
-  const closedCount = tickets.filter((ticket) => {
-    const status = normalizeSupportStatus(ticket.status);
-    return status === "CLOSED" || status === "RESOLVED";
-  }).length;
+const closedCount = tickets.filter(
+  (ticket) => compactSupportStatus(ticket.status) === "CLOSED",
+).length;
 
-  const pendingReplies = tickets.filter((ticket) => {
-    const status = normalizeSupportStatus(ticket.status);
-    return (status === "OPEN" || status === "IN_PROGRESS") && !ticket.reply?.trim();
-  }).length;
+const pendingReplies = tickets.filter((ticket) => {
+  return compactSupportStatus(ticket.status) === "OPEN" && !ticket.reply?.trim();
+}).length;
 
-  // The backend does not expose a resolvedAt timestamp, so this is approximated
-  // from the ticket creation date plus a resolved status.
-  const resolvedToday = tickets.filter((ticket) => {
-    const status = normalizeSupportStatus(ticket.status);
-    return status === "RESOLVED" && isToday(ticket.createdAt);
-  }).length;
+const closedToday = tickets.filter((ticket) => {
+  return compactSupportStatus(ticket.status) === "CLOSED" && isToday(ticket.createdAt);
+}).length;
 
   return (
     <section className="space-y-10">
@@ -189,11 +192,11 @@ export default function StaffSupportPanel() {
 
         <div className="col-span-12 sm:col-span-6 lg:col-span-3">
           <MetricCard
-            title="Closed Tickets"
-            value={String(closedCount)}
-            subtitle="CLOSED / RESOLVED"
-            icon={LifeBuoy}
-          />
+  title="Closed Tickets"
+  value={String(closedCount)}
+  subtitle="CLOSED"
+  icon={LifeBuoy}
+/>
         </div>
 
         <div className="col-span-12 sm:col-span-6 lg:col-span-3">
@@ -207,11 +210,11 @@ export default function StaffSupportPanel() {
 
         <div className="col-span-12 sm:col-span-6 lg:col-span-3">
           <MetricCard
-            title="Resolved Today"
-            value={String(resolvedToday)}
-            subtitle="Derived from createdAt"
-            icon={LifeBuoy}
-          />
+  title="Closed Today"
+  value={String(closedToday)}
+  subtitle="Derived from createdAt"
+  icon={LifeBuoy}
+/>
         </div>
       </div>
 
@@ -299,12 +302,12 @@ export default function StaffSupportPanel() {
 
                     <td className="p-5">
                       <span
-                        className={`inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.16em] ${supportStatusTone(
-                          ticket.status,
-                        )}`}
-                      >
-                        {supportStatusLabel(ticket.status)}
-                      </span>
+  className={`inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.16em] ${compactSupportStatusTone(
+    ticket.status,
+  )}`}
+>
+  {compactSupportStatusLabel(ticket.status)}
+</span>
                     </td>
 
                     <td className="p-5 text-sm text-[var(--foreground-muted)]">

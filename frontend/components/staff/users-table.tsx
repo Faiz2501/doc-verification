@@ -89,9 +89,13 @@ export default function UsersTable({
         const payload = response.data;
         const normalized = Array.isArray(payload) ? (payload as UserRow[]) : [];
 
-        if (cancelled) return;
+if (cancelled) return;
 
-        setRows(normalized);
+setRows(
+  normalized.filter(
+    (row) => String(row.role).toUpperCase() !== "SUPER_ADMIN",
+  ),
+);
       } catch (err: any) {
         console.error(err);
         setError(
@@ -116,20 +120,22 @@ export default function UsersTable({
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
 
-    return sortUsers(rows, mode).filter((row) => {
-      const label = [
-        displayName(row),
-        row.email,
-        row.role,
-        String(row.walletBalance ?? 0),
-        String(row.verificationCount ?? 0),
-        String(row.transactionCount ?? 0),
-      ]
-        .join(" ")
-        .toLowerCase();
+    return sortUsers(rows, mode)
+  .filter((row) => String(row.role).toUpperCase() !== "SUPER_ADMIN")
+  .filter((row) => {
+    const label = [
+      displayName(row),
+      row.email,
+      row.role,
+      String(row.walletBalance ?? 0),
+      String(row.verificationCount ?? 0),
+      String(row.transactionCount ?? 0),
+    ]
+      .join(" ")
+      .toLowerCase();
 
-      return label.includes(q);
-    });
+    return label.includes(q);
+  });
   }, [rows, search, mode]);
 
   if (access.loading || loading) {
