@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { ChevronDown } from "lucide-react";
+import { ChevronDown, Loader2 } from "lucide-react";
 import api from "@/lib/api/axios";
 
 type MeUser = {
@@ -16,15 +16,38 @@ type MeUser = {
 export default function SettingsPage() {
   const [profileOpen, setProfileOpen] = useState(true);
   const [securityOpen, setSecurityOpen] = useState(false);
+
   const [loading, setLoading] = useState(true);
+  const [savingProfile, setSavingProfile] = useState(false);
+  const [savingPassword, setSavingPassword] = useState(false);
+
   const [user, setUser] = useState<MeUser | null>(null);
+
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [email, setEmail] = useState("");
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
   const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
 
   useEffect(() => {
     const load = async () => {
       try {
+        setLoading(true);
+        setError("");
+        setSuccess("");
+
         const response = await api.get("/users/me");
-        setUser(response.data as MeUser);
+        const data = response.data as MeUser;
+
+        setUser(data);
+        setFirstName(data.firstName ?? "");
+        setLastName(data.lastName ?? "");
+        setEmail(data.email ?? "");
       } catch (err: any) {
         setError(
           err?.response?.data?.message ||
@@ -39,6 +62,83 @@ export default function SettingsPage() {
     void load();
   }, []);
 
+  const handleProfileSave = async () => {
+    try {
+      setSavingProfile(true);
+      setError("");
+      setSuccess("");
+
+      const response = await api.patch("/users/me", {
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+        email: email.trim(),
+      });
+
+      const updated = response.data as MeUser;
+      setUser(updated);
+      setFirstName(updated.firstName ?? "");
+      setLastName(updated.lastName ?? "");
+      setEmail(updated.email ?? "");
+
+      setSuccess("Profile updated successfully.");
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to update profile."
+      );
+    } finally {
+      setSavingProfile(false);
+    }
+  };
+
+  const handlePasswordSave = async () => {
+    try {
+      setSavingPassword(true);
+      setError("");
+      setSuccess("");
+
+      if (!currentPassword.trim()) {
+        setError("Current password is required.");
+        return;
+      }
+
+      if (!newPassword.trim()) {
+        setError("New password is required.");
+        return;
+      }
+
+      if (newPassword.length < 6) {
+        setError("New password must be at least 6 characters.");
+        return;
+      }
+
+      if (newPassword !== confirmPassword) {
+        setError("New password and confirm password do not match.");
+        return;
+      }
+
+      // No backend password-change endpoint exists yet.
+      // Replace this with your future endpoint, for example:
+      // await api.post("/auth/change-password", {
+      //   currentPassword,
+      //   newPassword,
+      // });
+
+      setError(
+        "Contact System Administrator to change your password."
+      );
+    } catch (err: any) {
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to update password."
+      );
+    } finally {
+      setSavingPassword(false);
+    }
+  };
+
   return (
     <div className="mx-auto max-w-4xl py-8">
       <div className="mb-10">
@@ -46,15 +146,24 @@ export default function SettingsPage() {
         <p className="mt-2 text-slate-400">Manage your account preferences.</p>
       </div>
 
-      {error && (
-        <div className="mb-6 rounded-2xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">
-          {error}
+      {(error || success) && (
+        <div
+          className={`mb-6 rounded-2xl border px-4 py-3 text-sm ${
+            error
+              ? "border-red-500/30 bg-red-500/10 text-red-300"
+              : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+          }`}
+        >
+          {error || success}
         </div>
       )}
 
       {loading ? (
         <div className="rounded-2xl border border-slate-800 bg-slate-950 p-8 text-slate-400">
-          Loading profile...
+          <div className="flex items-center gap-3">
+            <Loader2 className="animate-spin" size={18} />
+            Loading profile...
+          </div>
         </div>
       ) : (
         <>
@@ -81,33 +190,44 @@ export default function SettingsPage() {
               <div className="px-8 pb-8">
                 <div className="grid gap-4 md:grid-cols-2">
                   <input
-                    value={user?.firstName ?? ""}
-                    readOnly
-                    className="rounded-2xl border border-slate-800 bg-[#020d1b] p-4 text-white outline-none"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    placeholder="First Name"
+                    className="rounded-2xl border border-slate-800 bg-[#020d1b] p-4 text-white outline-none transition focus:border-blue-500"
                   />
 
                   <input
-                    value={user?.email ?? ""}
-                    readOnly
-                    className="rounded-2xl border border-slate-800 bg-[#020d1b] p-4 text-white outline-none"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="Email"
+                    className="rounded-2xl border border-slate-800 bg-[#020d1b] p-4 text-white outline-none transition focus:border-blue-500"
                   />
                 </div>
 
-                <div className="mt-4 rounded-2xl border border-slate-800 bg-[#020d1b] p-4">
-                  <p className="text-sm text-slate-400">Account Role</p>
-                  <p className="mt-1 capitalize text-white">{user?.role ?? "developer"}</p>
+                <div className="mt-4 grid gap-4 md:grid-cols-2">
+                  <input
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    placeholder="Last Name"
+                    className="rounded-2xl border border-slate-800 bg-[#020d1b] p-4 text-white outline-none transition focus:border-blue-500"
+                  />
+
+                  <div className="rounded-2xl border border-slate-800 bg-[#020d1b] p-4">
+                    <p className="text-sm text-slate-400">Account Role</p>
+                    <p className="mt-1 capitalize text-white">
+                      {user?.role ?? "CUSTOMER"}
+                    </p>
+                  </div>
                 </div>
 
                 <button
-                  disabled
-                  className="mt-6 rounded-xl bg-blue-600 px-5 py-3 text-white opacity-60"
+                  onClick={handleProfileSave}
+                  disabled={savingProfile}
+                  className="mt-6 rounded-xl bg-blue-600 px-5 py-3 text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Save Changes
+                  {savingProfile ? "Saving..." : "Save Changes"}
                 </button>
 
-                <p className="mt-3 text-sm text-slate-500">
-                  Profile update endpoint is not wired yet, so this section is read-only for now.
-                </p>
               </div>
             )}
           </div>
@@ -136,30 +256,37 @@ export default function SettingsPage() {
                 <div className="space-y-4">
                   <input
                     type="password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
                     placeholder="Current Password"
-                    className="w-full rounded-2xl border border-slate-800 bg-[#020d1b] p-4 text-white outline-none"
+                    className="w-full rounded-2xl border border-slate-800 bg-[#020d1b] p-4 text-white outline-none transition focus:border-blue-500"
                   />
                   <input
                     type="password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
                     placeholder="New Password"
-                    className="w-full rounded-2xl border border-slate-800 bg-[#020d1b] p-4 text-white outline-none"
+                    className="w-full rounded-2xl border border-slate-800 bg-[#020d1b] p-4 text-white outline-none transition focus:border-blue-500"
                   />
                   <input
                     type="password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
                     placeholder="Confirm Password"
-                    className="w-full rounded-2xl border border-slate-800 bg-[#020d1b] p-4 text-white outline-none"
+                    className="w-full rounded-2xl border border-slate-800 bg-[#020d1b] p-4 text-white outline-none transition focus:border-blue-500"
                   />
                 </div>
 
                 <button
-                  disabled
-                  className="mt-6 rounded-xl bg-blue-600 px-5 py-3 text-white opacity-60"
+                  onClick={handlePasswordSave}
+                  disabled={savingPassword}
+                  className="mt-6 rounded-xl bg-blue-600 px-5 py-3 text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  Update Password
+                  {savingPassword ? "Updating..." : "Update Password"}
                 </button>
 
                 <p className="mt-3 text-sm text-slate-500">
-                  No password update endpoint is exposed yet.
+                  Contact System Administrator to change your password.
                 </p>
               </div>
             )}

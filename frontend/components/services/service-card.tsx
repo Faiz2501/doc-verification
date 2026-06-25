@@ -40,52 +40,61 @@ export default function ServiceCard({
 
   return (
     <div
-  className={`group flex flex-col rounded-lg border p-5 transition-all duration-200 ${
-    available
-      ? "border-[#273647] bg-[#0D1C2D] hover:border-[#3B82F6] hover:shadow-[0_0_20px_rgba(59,130,246,0.12)] hover:-translate-y-[2px] hover:bg-[#122131]"
-      : "border-slate-700 bg-[#0A1624] opacity-70"
-  }`}
->
+      className={`group flex flex-col rounded-lg border p-5 transition-all duration-200 ${
+        available
+          ? "border-[#273647] bg-[#0D1C2D] hover:border-[#3B82F6] hover:shadow-[0_0_20px_rgba(59,130,246,0.12)] hover:-translate-y-[2px] hover:bg-[#122131]"
+          : "border-slate-700 bg-[#0A1624] opacity-70"
+      }`}
+    >
       <div className="mb-5 flex items-start justify-between">
         <div className="flex h-11 w-11 items-center justify-center rounded-md border border-[#273647] bg-[#122131] text-[#B4C5FF]">
           {icon}
         </div>
 
         <div
-  className={`flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] uppercase tracking-wider ${
-    available
-      ? "border-emerald-500/20 text-emerald-400"
-      : "border-slate-600 text-slate-400"
-  }`}
->
-  <span
-    className={`h-2 w-2 rounded-full ${
-      available ? "bg-emerald-500" : "bg-slate-500"
-    }`}
-  />
+          className={`flex items-center gap-2 rounded-md border px-2 py-1 text-[11px] uppercase tracking-wider ${
+            available
+              ? "border-emerald-500/20 text-emerald-400"
+              : "border-slate-600 text-slate-400"
+          }`}
+        >
+          <span
+            className={`h-2 w-2 rounded-full ${
+              available ? "bg-emerald-500" : "bg-slate-500"
+            }`}
+          />
 
-  {available ? "ACTIVE" : "INACTIVE"}
-</div>
+          {available ? "ACTIVE" : "INACTIVE"}
+        </div>
       </div>
 
-      <h3 className="mb-2 text-lg font-semibold text-white">{name}</h3>
-      <p className="mb-6 text-sm text-slate-400 line-clamp-3">{description}</p>
+      <h3 className="mb-2 text-lg font-semibold text-white">
+        {name}
+      </h3>
+
+      <p className="mb-6 line-clamp-3 text-sm text-slate-400">
+        {description}
+      </p>
 
       <div className="mt-auto">
-        <div className="mb-4 text-xs text-slate-400">₹{price} / request</div>
-
-        <div className="flex gap-2">
-          <button className="flex-1 rounded-md border border-[#273647] py-2 text-sm transition-all hover:bg-[#122131] hover:border-[#3B82F6] hover:text-white">
-            Docs
-          </button>
-
-          <button
-            onClick={() => (available ? setOpenVerify(true) : setOpenSoon(true))}
-            className="flex-1 rounded-md bg-[#0061FF] py-2 text-sm font-medium text-white hover:brightness-110 hover:shadow-[0_0_18px_rgba(37,99,235,0.25)]"
-          >
-            {available ? "Try API" : "Coming Soon"}
-          </button>
+        <div className="mb-4 text-xs text-slate-400">
+          ₹{price} / request
         </div>
+
+        <button
+          onClick={() =>
+            available
+              ? setOpenVerify(true)
+              : setOpenSoon(true)
+          }
+          className={`w-full rounded-md py-2 text-sm font-medium transition-all ${
+            available
+              ? "bg-[#0061FF] text-white hover:brightness-110 hover:shadow-[0_0_18px_rgba(37,99,235,0.25)]"
+              : "bg-[#0061FF] text-white opacity-80"
+          }`}
+        >
+          {available ? "Use" : "Coming Soon"}
+        </button>
       </div>
 
       <VerifyModal

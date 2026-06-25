@@ -9,13 +9,13 @@ import Link from "next/link";
 function roleLabel(role: UserRole | null) {
   if (role === "admin") return "Administrator";
   if (role === "staff") return "Staff";
-  return "Developer";
+  return "Customer";
 }
 
 function settingsPath(role: UserRole | null) {
   if (role === "admin") return "/admin/settings";
   if (role === "staff") return "/staff/settings";
-  return "/developer/settings";
+  return "/Customer/settings";
 }
 
 export default function UserMenu() {
@@ -62,7 +62,7 @@ export default function UserMenu() {
 
   return (
     <div className="flex items-center gap-5">
-      {role === "developer" && (
+      {role === "Customer" && (
         <button className="flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 transition-all hover:bg-[var(--hover-surface)]">
           <Wallet size={16} />
           <span className="text-sm font-medium">

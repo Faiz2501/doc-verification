@@ -1,39 +1,68 @@
-export default function UsageChart({
-  data = [],
+"use client";
+
+type ServiceRow = {
+  id: string;
+  serviceName: string;
+  amount: number;
+  status?: "SUCCESS" | "FAILED";
+  createdAt?: string;
+};
+
+function prettyServiceName(serviceName: string) {
+  return serviceName
+    .toLowerCase()
+    .replace(/_/g, " ")
+    .replace(/\b\w/g, (c) => c.toUpperCase());
+}
+
+export default function ServiceChart({
+  rows = [],
 }: {
-  data?: { label: string; count: number }[];
+  rows?: ServiceRow[];
 }) {
-  const max = Math.max(1, ...data.map((d) => d.count));
+  const max = Math.max(1, ...rows.map((d) => d.amount));
 
   return (
-    <div className="bg-[var(--surface)] border border-[var(--border)] rounded-[8px] p-6 h-[420px]">
-      <div className="flex items-center justify-between mb-8">
+    <div className="rounded-[8px] border border-[var(--border)] bg-[var(--surface)] p-6 h-[420px]">
+      <div className="mb-8 flex items-center justify-between">
         <h3 className="text-xl font-semibold tracking-[-0.03em]">
-          API Usage (Daily Volume)
+          Top Services
         </h3>
       </div>
 
       <div className="h-[320px] rounded-[6px] border border-[var(--border)] bg-[var(--surface-card)] p-4">
-        {data.length === 0 ? (
-          <div className="h-full flex items-center justify-center text-[var(--foreground-muted)]">
-            No usage data yet
+        {rows.length === 0 ? (
+          <div className="flex h-full items-center justify-center text-[var(--foreground-muted)]">
+            No service data yet
           </div>
         ) : (
-          <div className="flex h-full items-end gap-3">
-            {data.map((item) => (
-              <div key={item.label} className="flex-1">
-                <div className="mb-2 text-xs text-[var(--foreground-muted)]">
-                  {item.label}
+          <div className="flex h-full flex-col gap-4 overflow-auto pr-1">
+            {rows.map((item) => {
+              const percent = Math.max(
+                8,
+                (item.amount / max) * 100
+              );
+
+              return (
+                <div key={item.id} className="space-y-2">
+                  <div className="flex items-center justify-between">
+                    <div className="text-sm text-white">
+                      {prettyServiceName(item.serviceName)}
+                    </div>
+                    <div className="text-xs text-[var(--foreground-muted)]">
+                      {item.amount}
+                    </div>
+                  </div>
+
+                  <div className="h-2 rounded-full bg-[var(--border)]">
+                    <div
+                      className="h-2 rounded-full bg-blue-600"
+                      style={{ width: `${percent}%` }}
+                    />
+                  </div>
                 </div>
-                <div className="h-[240px] flex items-end">
-                  <div
-                    className="w-full rounded-t-md bg-blue-600"
-                    style={{ height: `${Math.max(8, (item.count / max) * 100)}%` }}
-                  />
-                </div>
-                <div className="mt-2 text-xs text-center text-white">{item.count}</div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>

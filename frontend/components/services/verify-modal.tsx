@@ -28,7 +28,6 @@ export default function VerifyModal({
   placeholder,
   defaultApiKey = "",
 }: Props) {
-  const [apiKey, setApiKey] = useState(defaultApiKey);
   const [singleValue, setSingleValue] = useState("");
 
   const [dlNumber, setDlNumber] = useState("");
@@ -47,7 +46,6 @@ export default function VerifyModal({
 
   useEffect(() => {
     if (open) {
-      setApiKey(defaultApiKey || "");
       setSingleValue("");
       setDlNumber("");
       setDobDay("");
@@ -100,8 +98,10 @@ export default function VerifyModal({
         return;
       }
 
-      if (!apiKey.trim()) {
-        setError("Please enter your API key.");
+      const apiKey = defaultApiKey.trim();
+
+      if (!apiKey) {
+        setError("No active API key found. Please generate or activate one from your API keys page.");
         return;
       }
 
@@ -111,14 +111,9 @@ export default function VerifyModal({
         method: "post",
         url: endpoint,
         data: payload,
-        headers:
-          payload instanceof FormData
-            ? {
-                "x-api-key": apiKey.trim(),
-              }
-            : {
-                "x-api-key": apiKey.trim(),
-              },
+        headers: {
+          "x-api-key": apiKey,
+        },
       });
 
       setResult(response.data);
@@ -196,10 +191,6 @@ export default function VerifyModal({
               />
             </div>
           </div>
-
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
-            ₹2.5 will be deducted from your available balance for this Driving License verification.
-          </div>
         </div>
       );
     }
@@ -230,10 +221,6 @@ export default function VerifyModal({
               className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
             />
           </div>
-
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
-            ₹2 will be deducted from your available balance for this Bank Verification.
-          </div>
         </div>
       );
     }
@@ -252,10 +239,6 @@ export default function VerifyModal({
               className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
             />
           </div>
-
-          <div className="rounded-xl border border-amber-500/20 bg-amber-500/10 px-4 py-3 text-sm text-amber-300">
-            ₹3 will be deducted for PAN → UDYAM verification.
-          </div>
         </div>
       );
     }
@@ -268,7 +251,9 @@ export default function VerifyModal({
       <div className="w-[880px] rounded-xl border border-[#273647] bg-[#0D1C2D] p-6">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-semibold text-white">{serviceName}</h2>
+            <h2 className="text-2xl font-semibold text-white">
+              {serviceName}
+            </h2>
             <p className="mt-1 text-slate-400">
               {endpoint || "Fill the form below and send it to the backend."}
             </p>
@@ -277,16 +262,6 @@ export default function VerifyModal({
           <button onClick={onClose}>
             <X />
           </button>
-        </div>
-
-        <div className="mt-6">
-          <label className="mb-2 block text-sm text-slate-300">API Key</label>
-          <input
-            value={apiKey}
-            onChange={(e) => setApiKey(e.target.value)}
-            placeholder="sk_live_xxx"
-            className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
-          />
         </div>
 
         <div className="mt-6">{renderBody()}</div>
@@ -309,41 +284,21 @@ export default function VerifyModal({
           </div>
         )}
 
-        {mode !== "pan-udyam" && (
-          <div className="mt-6 flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="rounded-xl border border-[#273647] px-5 py-3 text-white"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="rounded-xl bg-blue-600 px-5 py-3 text-white disabled:opacity-60"
-            >
-              {loading ? "Verifying..." : "Verify"}
-            </button>
-          </div>
-        )}
-
-        {mode === "pan-udyam" && (
-          <div className="mt-6 flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="rounded-xl border border-[#273647] px-5 py-3 text-white"
-            >
-              Cancel
-            </button>
-            <button
-              onClick={handleSubmit}
-              disabled={loading}
-              className="rounded-xl bg-blue-600 px-5 py-3 text-white disabled:opacity-60"
-            >
-              {loading ? "Verifying..." : "Verify"}
-            </button>
-          </div>
-        )}
+        <div className="mt-6 flex justify-end gap-3">
+          <button
+            onClick={onClose}
+            className="rounded-xl border border-[#273647] px-5 py-3 text-white"
+          >
+            Cancel
+          </button>
+          <button
+            onClick={handleSubmit}
+            disabled={loading}
+            className="rounded-xl bg-blue-600 px-5 py-3 text-white disabled:opacity-60"
+          >
+            {loading ? "Verifying..." : "Verify"}
+          </button>
+        </div>
       </div>
     </div>,
     document.body

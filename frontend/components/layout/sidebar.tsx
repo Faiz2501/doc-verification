@@ -19,7 +19,7 @@ function navForRole(role: UserRole | null) {
 function portalNameForRole(role: UserRole | null) {
   if (role === "admin") return "Admin Portal";
   if (role === "staff") return "Staff Portal";
-  return "Developer Portal";
+  return "Customer Portal";
 }
 
 export default function Sidebar() {
@@ -33,7 +33,7 @@ export default function Sidebar() {
   const derivedRole: UserRole | null = useMemo(() => {
     if (pathname.startsWith("/admin")) return "admin";
     if (pathname.startsWith("/staff")) return "staff";
-    if (pathname.startsWith("/developer")) return "developer";
+    if (pathname.startsWith("/")) return "customer";
     return role;
   }, [pathname, role]);
 
