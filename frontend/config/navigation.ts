@@ -3,12 +3,15 @@ import {
   ShieldCheck,
   KeyRound,
   Settings,
+  FileText,
   CreditCard,
   Users,
   BadgeIndianRupee,
   LifeBuoy,
   MessageSquare,
 } from "lucide-react";
+
+import { STAFF_PERMISSIONS } from "./staff-permissions";
 
 export const developerNavigation = [
   {
@@ -30,6 +33,11 @@ export const developerNavigation = [
     title: "Settings",
     href: "/developer/settings",
     icon: Settings,
+  },
+  {
+    title: "Documentation",
+    href: "/developer/docs",
+    icon: FileText,
   },
 ];
 
@@ -81,16 +89,25 @@ export const staffNavigation = [
     title: "Verifications",
     href: "/staff/verifications",
     icon: ShieldCheck,
+    requiredPermission: STAFF_PERMISSIONS.VIEW_VERIFICATIONS,
   },
   {
     title: "Transactions",
     href: "/staff/transactions",
     icon: CreditCard,
+    requiredPermission: STAFF_PERMISSIONS.VIEW_TRANSACTIONS,
   },
   {
     title: "Support",
     href: "/staff/support",
-    icon: MessageSquare,
+    icon: LifeBuoy,
+    requiredPermission: STAFF_PERMISSIONS.VIEW_SUPPORT,
+  },
+  {
+    title: "Users",
+    href: "/staff/users",
+    icon: Users,
+    requiredPermission: STAFF_PERMISSIONS.VIEW_USERS,
   },
   {
     title: "Settings",

@@ -1,5 +1,5 @@
-import AdminVerificationsPanel from "@/components/admin/admin-verifications-panel";
+import StaffVerificationsPanel from "@/components/staff/staff-verifications-panel";
 
 export default function VerificationsPage() {
-  return <AdminVerificationsPanel />;
+  return <StaffVerificationsPanel />;
 }

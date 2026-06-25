@@ -31,6 +31,11 @@ export default function UserMenu() {
     let cancelled = false;
 
     const loadWallet = async () => {
+      if (role !== "developer") {
+        setWalletBalance(null);
+        return;
+      }
+
       try {
         const meResponse = await api.get("/users/me");
         const me = meResponse.data as { id: string };
@@ -53,7 +58,7 @@ export default function UserMenu() {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [role]);
 
   const handleLogout = () => {
     logout();
@@ -62,7 +67,7 @@ export default function UserMenu() {
 
   return (
     <div className="flex items-center gap-5">
-      {role === "developer" && (
+      {role === "developer" ? (
         <button className="flex items-center gap-2 rounded-[6px] border border-[var(--border)] bg-[var(--surface)] px-3 py-2 transition-all hover:bg-[var(--hover-surface)]">
           <Wallet size={16} />
           <span className="text-sm font-medium">
@@ -71,7 +76,7 @@ export default function UserMenu() {
               : `₹${new Intl.NumberFormat("en-IN").format(walletBalance)}`}
           </span>
         </button>
-      )}
+      ) : null}
 
       <div className="relative">
         <button
