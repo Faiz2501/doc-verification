@@ -25,22 +25,35 @@ type SupportTicket = {
   customerEmail?: string;
   userRole?: string;
 };
+
 const FILTERS = ["All", "Open", "Closed"] as const;
 
 function normalizeTicket(raw: any): SupportTicket {
+  const customerName =
+    raw?.customerName ||
+    [raw?.user?.firstName, raw?.user?.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim() ||
+    raw?.user?.email ||
+    "Unnamed User";
+
+  const customerEmail = raw?.customerEmail || raw?.user?.email || "No email";
+
   return {
     id: String(raw?.id ?? ""),
-    userId: String(raw?.userId ?? ""),
+    userId: String(raw?.userId ?? raw?.user?.id ?? ""),
     subject: String(raw?.subject ?? raw?.title ?? "Untitled Ticket"),
     message: String(raw?.message ?? raw?.issue ?? raw?.description ?? ""),
     status: String(raw?.status ?? "OPEN"),
     createdAt: String(raw?.createdAt ?? ""),
     reply: raw?.reply ?? null,
-    customerName: raw?.customerName,
-    customerEmail: raw?.customerEmail,
+    customerName,
+    customerEmail,
     userRole: raw?.userRole,
   };
 }
+
 function compactSupportStatus(status?: string | null) {
   const value = String(status ?? "").toUpperCase();
   return value === "CLOSED" || value === "RESOLVED" ? "CLOSED" : "OPEN";
@@ -85,7 +98,7 @@ export default function StaffSupportPanel() {
       setError(
         err?.response?.data?.message ||
           err?.message ||
-          "Failed to load support tickets.",
+          "Failed to load support tickets."
       );
     } finally {
       setLoading(false);
@@ -110,22 +123,22 @@ export default function StaffSupportPanel() {
     return tickets.filter((ticket) => {
       const status = compactSupportStatus(ticket.status);
 
-const searchMatch = [
-  ticket.id,
-  ticket.customerName,
-  ticket.customerEmail,
-  ticket.subject,
-  ticket.message,
-  ticket.reply,
-]
-  .join(" ")
-  .toLowerCase()
-  .includes(q);
+      const searchMatch = [
+        ticket.id,
+        ticket.customerName,
+        ticket.customerEmail,
+        ticket.subject,
+        ticket.message,
+        ticket.reply,
+      ]
+        .join(" ")
+        .toLowerCase()
+        .includes(q);
 
-const filterMatch =
-  filter === "All" ||
-  (filter === "Open" && status === "OPEN") ||
-  (filter === "Closed" && status === "CLOSED");
+      const filterMatch =
+        filter === "All" ||
+        (filter === "Open" && status === "OPEN") ||
+        (filter === "Closed" && status === "CLOSED");
 
       return searchMatch && filterMatch;
     });
@@ -150,20 +163,20 @@ const filterMatch =
   }
 
   const openCount = tickets.filter(
-  (ticket) => compactSupportStatus(ticket.status) === "OPEN",
-).length;
+    (ticket) => compactSupportStatus(ticket.status) === "OPEN"
+  ).length;
 
-const closedCount = tickets.filter(
-  (ticket) => compactSupportStatus(ticket.status) === "CLOSED",
-).length;
+  const closedCount = tickets.filter(
+    (ticket) => compactSupportStatus(ticket.status) === "CLOSED"
+  ).length;
 
-const pendingReplies = tickets.filter((ticket) => {
-  return compactSupportStatus(ticket.status) === "OPEN" && !ticket.reply?.trim();
-}).length;
+  const pendingReplies = tickets.filter((ticket) => {
+    return compactSupportStatus(ticket.status) === "OPEN" && !ticket.reply?.trim();
+  }).length;
 
-const closedToday = tickets.filter((ticket) => {
-  return compactSupportStatus(ticket.status) === "CLOSED" && isToday(ticket.createdAt);
-}).length;
+  const closedToday = tickets.filter((ticket) => {
+    return compactSupportStatus(ticket.status) === "CLOSED" && isToday(ticket.createdAt);
+  }).length;
 
   return (
     <section className="space-y-10">
@@ -192,11 +205,11 @@ const closedToday = tickets.filter((ticket) => {
 
         <div className="col-span-12 sm:col-span-6 lg:col-span-3">
           <MetricCard
-  title="Closed Tickets"
-  value={String(closedCount)}
-  subtitle="CLOSED"
-  icon={LifeBuoy}
-/>
+            title="Closed Tickets"
+            value={String(closedCount)}
+            subtitle="CLOSED"
+            icon={LifeBuoy}
+          />
         </div>
 
         <div className="col-span-12 sm:col-span-6 lg:col-span-3">
@@ -210,11 +223,11 @@ const closedToday = tickets.filter((ticket) => {
 
         <div className="col-span-12 sm:col-span-6 lg:col-span-3">
           <MetricCard
-  title="Closed Today"
-  value={String(closedToday)}
-  subtitle="Derived from createdAt"
-  icon={LifeBuoy}
-/>
+            title="Closed Today"
+            value={String(closedToday)}
+            subtitle="Derived from createdAt"
+            icon={LifeBuoy}
+          />
         </div>
       </div>
 
@@ -271,7 +284,10 @@ const closedToday = tickets.filter((ticket) => {
             <tbody>
               {filteredTickets.length === 0 ? (
                 <tr>
-                  <td colSpan={5} className="p-8 text-center text-[var(--foreground-muted)]">
+                  <td
+                    colSpan={5}
+                    className="p-8 text-center text-[var(--foreground-muted)]"
+                  >
                     No tickets found.
                   </td>
                 </tr>
@@ -291,7 +307,8 @@ const closedToday = tickets.filter((ticket) => {
 
                     <td className="p-5">
                       <p className="font-medium text-white">
-                        {ticket.customerName || displayName({ email: ticket.customerEmail })}
+                        {ticket.customerName ||
+                          displayName({ email: ticket.customerEmail })}
                       </p>
                       <p className="mt-1 text-xs text-slate-500">
                         {ticket.customerEmail || "No email"}
@@ -302,12 +319,12 @@ const closedToday = tickets.filter((ticket) => {
 
                     <td className="p-5">
                       <span
-  className={`inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.16em] ${compactSupportStatusTone(
-    ticket.status,
-  )}`}
->
-  {compactSupportStatusLabel(ticket.status)}
-</span>
+                        className={`inline-flex rounded-full border px-3 py-1 text-xs uppercase tracking-[0.16em] ${compactSupportStatusTone(
+                          ticket.status
+                        )}`}
+                      >
+                        {compactSupportStatusLabel(ticket.status)}
+                      </span>
                     </td>
 
                     <td className="p-5 text-sm text-[var(--foreground-muted)]">

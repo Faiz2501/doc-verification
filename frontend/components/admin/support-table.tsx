@@ -27,8 +27,16 @@ type TicketRecord = {
   updatedAt?: string;
   reply?: string | null;
   conversation?: TicketMessage[];
+
   customerName?: string;
   customerEmail?: string;
+
+  user?: {
+    id: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    email?: string | null;
+  };
 };
 
 const FILTERS: Filter[] = ["All", "Open", "Closed"];
@@ -87,6 +95,17 @@ function formatRelativeTime(dateLike?: string) {
 }
 
 function normalizeTicket(raw: any): TicketRecord {
+  const customerName =
+    raw?.customerName ||
+    [raw?.user?.firstName, raw?.user?.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim() ||
+    raw?.user?.email ||
+    "Unnamed User";
+
+  const customerEmail = raw?.customerEmail || raw?.user?.email || "No email";
+
   return {
     id: String(raw?.id ?? raw?.ticketId ?? raw?.code ?? ""),
     userId: String(
@@ -103,16 +122,27 @@ function normalizeTicket(raw: any): TicketRecord {
       raw?.issueTitle ||
       raw?.topic ||
       "Untitled ticket",
+
     issue:
       raw?.issue ||
       raw?.message ||
       raw?.description ||
       raw?.details ||
       "",
+
     status: normalizeStatus(raw?.status),
+
     createdAt: raw?.createdAt || raw?.created_at || raw?.time,
+
     updatedAt: raw?.updatedAt || raw?.updated_at,
+
     reply: raw?.reply ?? raw?.response ?? null,
+
+    customerName,
+    customerEmail,
+
+    user: raw.user,
+
     conversation: Array.isArray(raw?.conversation)
       ? raw.conversation
       : Array.isArray(raw?.messages)
@@ -252,8 +282,8 @@ export default function SupportTable() {
                     {ticket.id}
                   </p>
                   <p className="pt-2 text-sm text-white/90 line-clamp-2">
-  {ticket.issue}
-</p>
+                    {ticket.issue}
+                  </p>
                 </div>
 
                 <div className="flex items-end gap-4 md:flex-col md:items-end">
@@ -279,14 +309,15 @@ export default function SupportTable() {
 
               <div className="mt-5 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
                 <p className="text-[var(--foreground-muted)]">
-                  {ticket.customerName}
+                  {ticket.customerName ||
+                    displayNameFromUser({ email: ticket.customerEmail })}
                 </p>
                 <p className="text-[var(--foreground-muted)]">
-  User ID: {ticket.userId || "—"}
-</p>
-<p className="text-sm text-[var(--foreground-muted)]">
-  {formatRelativeTime(ticket.createdAt)}
-</p>
+                  User ID: {ticket.userId || "—"}
+                </p>
+                <p className="text-sm text-[var(--foreground-muted)]">
+                  {formatRelativeTime(ticket.createdAt)}
+                </p>
               </div>
             </div>
           ))

@@ -31,15 +31,20 @@ export default function SettingsPage() {
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
 
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [profileError, setProfileError] = useState("");
+  const [profileSuccess, setProfileSuccess] = useState("");
+
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
 
   useEffect(() => {
     const load = async () => {
       try {
         setLoading(true);
-        setError("");
-        setSuccess("");
+        setProfileError("");
+        setProfileSuccess("");
+        setPasswordError("");
+        setPasswordSuccess("");
 
         const response = await api.get("/users/me");
         const data = response.data as MeUser;
@@ -49,7 +54,7 @@ export default function SettingsPage() {
         setLastName(data.lastName ?? "");
         setEmail(data.email ?? "");
       } catch (err: any) {
-        setError(
+        setProfileError(
           err?.response?.data?.message ||
             err?.message ||
             "Failed to load profile."
@@ -65,8 +70,8 @@ export default function SettingsPage() {
   const handleProfileSave = async () => {
     try {
       setSavingProfile(true);
-      setError("");
-      setSuccess("");
+      setProfileError("");
+      setProfileSuccess("");
 
       const response = await api.patch("/users/me", {
         firstName: firstName.trim(),
@@ -80,9 +85,9 @@ export default function SettingsPage() {
       setLastName(updated.lastName ?? "");
       setEmail(updated.email ?? "");
 
-      setSuccess("Profile updated successfully.");
+      setProfileSuccess("Profile updated successfully.");
     } catch (err: any) {
-      setError(
+      setProfileError(
         err?.response?.data?.message ||
           err?.message ||
           "Failed to update profile."
@@ -95,41 +100,43 @@ export default function SettingsPage() {
   const handlePasswordSave = async () => {
     try {
       setSavingPassword(true);
-      setError("");
-      setSuccess("");
+      setPasswordError("");
+      setPasswordSuccess("");
 
       if (!currentPassword.trim()) {
-        setError("Current password is required.");
+        setPasswordError("Current password is required.");
         return;
       }
 
       if (!newPassword.trim()) {
-        setError("New password is required.");
+        setPasswordError("New password is required.");
         return;
       }
 
       if (newPassword.length < 6) {
-        setError("New password must be at least 6 characters.");
+        setPasswordError("New password must be at least 6 characters.");
         return;
       }
 
       if (newPassword !== confirmPassword) {
-        setError("New password and confirm password do not match.");
+        setPasswordError("New password and confirm password do not match.");
         return;
       }
 
-      // No backend password-change endpoint exists yet.
-      // Replace this with your future endpoint, for example:
-      // await api.post("/auth/change-password", {
-      //   currentPassword,
-      //   newPassword,
-      // });
+      const response = await api.patch("/auth/change-password", {
+        currentPassword,
+        newPassword,
+      });
 
-      setError(
-        "Contact System Administrator to change your password."
+      setPasswordSuccess(
+        response.data?.message || "Password updated successfully."
       );
+
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
     } catch (err: any) {
-      setError(
+      setPasswordError(
         err?.response?.data?.message ||
           err?.message ||
           "Failed to update password."
@@ -145,18 +152,6 @@ export default function SettingsPage() {
         <h1 className="text-4xl font-bold text-white">Settings</h1>
         <p className="mt-2 text-slate-400">Manage your account preferences.</p>
       </div>
-
-      {(error || success) && (
-        <div
-          className={`mb-6 rounded-2xl border px-4 py-3 text-sm ${
-            error
-              ? "border-red-500/30 bg-red-500/10 text-red-300"
-              : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
-          }`}
-        >
-          {error || success}
-        </div>
-      )}
 
       {loading ? (
         <div className="rounded-2xl border border-slate-800 bg-slate-950 p-8 text-slate-400">
@@ -228,6 +223,17 @@ export default function SettingsPage() {
                   {savingProfile ? "Saving..." : "Save Changes"}
                 </button>
 
+                {(profileError || profileSuccess) && (
+                  <div
+                    className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
+                      profileError
+                        ? "border-red-500/30 bg-red-500/10 text-red-300"
+                        : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                    }`}
+                  >
+                    {profileError || profileSuccess}
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -285,8 +291,20 @@ export default function SettingsPage() {
                   {savingPassword ? "Updating..." : "Update Password"}
                 </button>
 
+                {(passwordError || passwordSuccess) && (
+                  <div
+                    className={`mt-4 rounded-2xl border px-4 py-3 text-sm ${
+                      passwordError
+                        ? "border-red-500/30 bg-red-500/10 text-red-300"
+                        : "border-emerald-500/30 bg-emerald-500/10 text-emerald-300"
+                    }`}
+                  >
+                    {passwordError || passwordSuccess}
+                  </div>
+                )}
+
                 <p className="mt-3 text-sm text-slate-500">
-                  Contact System Administrator to change your password.
+                  Use your current password to update this account.
                 </p>
               </div>
             )}

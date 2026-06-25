@@ -35,7 +35,7 @@ export default function Sidebar() {
     ? "Admin Portal"
     : isStaffRoute
     ? "Staff Portal"
-    : "Developer Portal";
+    : "Customer Portal";
 
   return (
     <aside className="fixed left-0 top-0 z-50 flex h-screen w-[260px] flex-col border-r border-[var(--border)] bg-[var(--surface)]">

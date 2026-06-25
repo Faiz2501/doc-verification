@@ -17,11 +17,26 @@ type TicketMessage = {
 type TicketDetail = {
   id: string;
   userId: string;
+
   subject: string;
   issue: string;
+
   status: TicketStatus;
+
   createdAt?: string;
+
   reply?: string | null;
+
+  customerName?: string;
+  customerEmail?: string;
+
+  user?: {
+    id: string;
+    firstName?: string | null;
+    lastName?: string | null;
+    email?: string | null;
+  };
+
   conversation?: TicketMessage[];
 };
 
@@ -67,8 +82,23 @@ function displayNameFromUser(user: {
 }
 
 function normalizeTicket(raw: any): TicketDetail {
+  const customerName =
+    raw?.customerName ||
+    [raw?.user?.firstName, raw?.user?.lastName]
+      .filter(Boolean)
+      .join(" ")
+      .trim() ||
+    raw?.user?.email ||
+    "Unnamed User";
+
+  const customerEmail =
+    raw?.customerEmail ||
+    raw?.user?.email ||
+    "No email";
+
   return {
     id: String(raw?.id ?? raw?.ticketId ?? ""),
+
     userId: String(
       raw?.userId ??
         raw?.user?.id ??
@@ -77,21 +107,32 @@ function normalizeTicket(raw: any): TicketDetail {
         raw?.requester?.id ??
         ""
     ),
+
     subject:
       raw?.subject ||
       raw?.title ||
       raw?.issueTitle ||
       raw?.topic ||
       "Untitled ticket",
+
     issue:
       raw?.issue ||
       raw?.message ||
       raw?.description ||
       raw?.details ||
       "",
+
     status: normalizeStatus(raw?.status),
+
     createdAt: raw?.createdAt || raw?.created_at || raw?.time,
+
     reply: raw?.reply ?? raw?.response ?? null,
+
+    customerName,
+    customerEmail,
+
+    user: raw.user,
+
     conversation: Array.isArray(raw?.conversation)
       ? raw.conversation
       : Array.isArray(raw?.messages)
@@ -299,6 +340,27 @@ export default function TicketDrawer({
 
           <div>
             <p className="text-slate-500">User</p>
+
+            <p className="mt-2 text-white font-medium">
+              {loading
+                ? "Loading..."
+                : ticket?.customerName ||
+                  (ticket?.user
+                    ? [ticket.user.firstName, ticket.user.lastName]
+                        .filter(Boolean)
+                        .join(" ")
+                    : "") ||
+                  ticket?.user?.email ||
+                  "Unnamed User"}
+            </p>
+
+            <p className="text-sm text-slate-400">
+              {loading
+                ? ""
+                : ticket?.customerEmail ||
+                  ticket?.user?.email ||
+                  "No email"}
+            </p>
           </div>
 
           <div className="space-y-8">

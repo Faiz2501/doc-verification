@@ -30,14 +30,14 @@ export const developerNavigation = [
     icon: KeyRound,
   },
   {
+    title: "Support",
+    href: "/developer/support",
+    icon: MessageSquare,
+  },
+  {
     title: "Settings",
     href: "/developer/settings",
     icon: Settings,
-  },
-  {
-    title: "Documentation",
-    href: "/developer/docs",
-    icon: FileText,
   },
 ];
 
@@ -51,6 +51,11 @@ export const adminNavigation = [
     title: "Staff Management",
     href: "/admin/staff",
     icon: Users,
+  },
+  {
+    title: "API Keys",
+    href: "/admin/api-keys",
+    icon: KeyRound,
   },
   {
     title: "Pricing",

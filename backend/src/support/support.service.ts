@@ -31,6 +31,16 @@ export class SupportService {
       where: {
         userId,
       },
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
       orderBy: {
         createdAt: 'desc',
       },
@@ -39,6 +49,16 @@ export class SupportService {
 
   async getAllTickets() {
     return this.prisma.supportTicket.findMany({
+      include: {
+        user: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+          },
+        },
+      },
       orderBy: {
         createdAt: 'desc',
       },
@@ -50,6 +70,16 @@ export class SupportService {
       await this.prisma.supportTicket.findUnique({
         where: {
           id: ticketId,
+        },
+        include: {
+          user: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+            },
+          },
         },
       });
 

@@ -1,15 +1,31 @@
 "use client";
 
+
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
-import { X, CheckCircle2 } from "lucide-react";
+import { CheckCircle2, X } from "lucide-react";
 import api from "@/lib/api/axios";
+
+import VerificationResult from "@/components/services/verification-result";
+
+type ServiceMode =
+  | "single"
+  | "driving-license"
+  | "bank"
+  | "passport"
+  | "digilocker"
+  | "face-match"
+  | "face-liveness"
+  | "name-match"
+  | "reverse-geocode"
+  | "employment-360"
+  | "coming-soon";
 
 type Props = {
   open: boolean;
   onClose: () => void;
   serviceName: string;
-  mode: "single" | "driving-license" | "bank" | "pan-udyam" | "coming-soon";
+  mode: ServiceMode;
   endpoint?: string;
   requestKey?: string;
   inputLabel?: string;
@@ -35,56 +51,215 @@ export default function VerifyModal({
   const [dobMonth, setDobMonth] = useState("");
   const [dobYear, setDobYear] = useState("");
 
+  const [passportFileNumber, setPassportFileNumber] = useState("");
+  const [passportDob, setPassportDob] = useState("");
+
   const [bankAccount, setBankAccount] = useState("");
   const [ifscCode, setIfscCode] = useState("");
 
-  const [panValue, setPanValue] = useState("");
+  const [documentRequested, setDocumentRequested] = useState("AADHAAR");
+  const [userFlow, setUserFlow] = useState("signup");
+
+  const [faceImage1, setFaceImage1] = useState<File | null>(null);
+  const [faceImage2, setFaceImage2] = useState<File | null>(null);
+  const [livenessImage, setLivenessImage] = useState<File | null>(null);
+
+  const [name1, setName1] = useState("");
+  const [name2, setName2] = useState("");
+
+  const [latitude, setLatitude] = useState("");
+  const [longitude, setLongitude] = useState("");
+
+  const [employmentPhone, setEmploymentPhone] = useState("");
 
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<any>(null);
 
   useEffect(() => {
-    if (open) {
-      setSingleValue("");
-      setDlNumber("");
-      setDobDay("");
-      setDobMonth("");
-      setDobYear("");
-      setBankAccount("");
-      setIfscCode("");
-      setPanValue("");
-      setError("");
-      setResult(null);
-    }
+    if (!open) return;
+
+    setSingleValue("");
+    setDlNumber("");
+    setDobDay("");
+    setDobMonth("");
+    setDobYear("");
+    setPassportFileNumber("");
+    setPassportDob("");
+    setBankAccount("");
+    setIfscCode("");
+    setDocumentRequested("AADHAAR");
+    setUserFlow("signup");
+    setFaceImage1(null);
+    setFaceImage2(null);
+    setLivenessImage(null);
+    setName1("");
+    setName2("");
+    setLatitude("");
+    setLongitude("");
+    setEmploymentPhone("");
+    setError("");
+    setResult(null);
   }, [open, defaultApiKey]);
 
   if (!open) return null;
 
-  const buildPayload = () => {
-    if (mode === "single") {
-      return { [requestKey || "value"]: singleValue.trim() };
-    }
+  const buildPayload = (): FormData | Record<string, any> | null => {
+    const value = singleValue.trim();
 
-    if (mode === "driving-license") {
-      return {
-        drivingLicenseNumber: dlNumber.trim(),
-        dateOfBirth: `${dobYear}-${dobMonth.padStart(2, "0")}-${dobDay.padStart(2, "0")}`,
-      };
-    }
+    switch (mode) {
+      case "single": {
+        if (!value) {
+          setError(`${inputLabel || "Value"} is required.`);
+          return null;
+        }
 
-    if (mode === "bank") {
-      return {
-        accountNumber: bankAccount.trim(),
-        ifscCode: ifscCode.trim(),
-      };
-    }
+        return { [requestKey || "value"]: value };
+      }
 
-    if (mode === "pan-udyam") {
-      return { panNumber: panValue.trim() };
-    }
+      case "driving-license": {
+        if (!dlNumber.trim()) {
+          setError("Driving license number is required.");
+          return null;
+        }
 
-    return {};
+        if (!dobDay.trim() || !dobMonth.trim() || !dobYear.trim()) {
+          setError("Date of birth is required.");
+          return null;
+        }
+
+        return {
+          dlNumber: dlNumber.trim(),
+          dob: `${dobYear}-${dobMonth.padStart(2, "0")}-${dobDay.padStart(2, "0")}`,
+        };
+      }
+
+      case "passport": {
+        if (!passportFileNumber.trim()) {
+          setError("Passport file number is required.");
+          return null;
+        }
+
+        if (!passportDob) {
+          setError("Passport date of birth is required.");
+          return null;
+        }
+
+        return {
+          fileNumber: passportFileNumber.trim(),
+          dob: passportDob,
+        };
+      }
+
+      case "bank": {
+        if (!bankAccount.trim()) {
+          setError("Bank account number is required.");
+          return null;
+        }
+
+        if (!ifscCode.trim()) {
+          setError("IFSC code is required.");
+          return null;
+        }
+
+        return {
+          bankAccount: bankAccount.trim(),
+          ifsc: ifscCode.trim().toUpperCase(),
+        };
+      }
+
+      case "digilocker": {
+        const docs = documentRequested
+          .split(",")
+          .map((item) => item.trim().toUpperCase())
+          .filter(Boolean);
+
+        if (docs.length === 0) {
+          setError("Please provide at least one document to request.");
+          return null;
+        }
+
+        if (!userFlow.trim()) {
+          setError("User flow is required.");
+          return null;
+        }
+
+        return {
+          document_requested: docs,
+          user_flow: userFlow.trim(),
+        };
+      }
+
+      case "face-match": {
+        if (!faceImage1 || !faceImage2) {
+          setError("Please upload both images.");
+          return null;
+        }
+
+        const formData = new FormData();
+        formData.append("image1", faceImage1);
+        formData.append("image2", faceImage2);
+        return formData;
+      }
+
+      case "face-liveness": {
+        if (!livenessImage) {
+          setError("Please upload an image.");
+          return null;
+        }
+
+        const formData = new FormData();
+        formData.append("image", livenessImage);
+        return formData;
+      }
+
+      case "name-match": {
+        if (!name1.trim() || !name2.trim()) {
+          setError("Both names are required.");
+          return null;
+        }
+
+        return {
+          name1: name1.trim(),
+          name2: name2.trim(),
+        };
+      }
+
+      case "reverse-geocode": {
+        if (!latitude.trim() || !longitude.trim()) {
+          setError("Latitude and longitude are required.");
+          return null;
+        }
+
+        const lat = Number(latitude.trim());
+        const lng = Number(longitude.trim());
+
+        if (Number.isNaN(lat) || Number.isNaN(lng)) {
+          setError("Latitude and longitude must be valid numbers.");
+          return null;
+        }
+
+        return {
+          latitude: lat,
+          longitude: lng,
+        };
+      }
+
+      case "employment-360": {
+        if (!employmentPhone.trim()) {
+          setError("Mobile number is required.");
+          return null;
+        }
+
+        return {
+          phoneNumber: employmentPhone.trim(),
+        };
+      }
+
+      case "coming-soon":
+      default:
+        return {};
+    }
   };
 
   const handleSubmit = async () => {
@@ -101,11 +276,14 @@ export default function VerifyModal({
       const apiKey = defaultApiKey.trim();
 
       if (!apiKey) {
-        setError("No active API key found. Please generate or activate one from your API keys page.");
+        setError(
+          "No active API key found. Please generate or activate one from your API keys page."
+        );
         return;
       }
 
       const payload = buildPayload();
+      if (!payload) return;
 
       const response = await api.request({
         method: "post",
@@ -195,6 +373,36 @@ export default function VerifyModal({
       );
     }
 
+    if (mode === "passport") {
+      return (
+        <div className="space-y-5">
+          <div>
+            <label className="mb-2 block text-sm text-slate-300">
+              Passport File Number
+            </label>
+            <input
+              value={passportFileNumber}
+              onChange={(e) => setPassportFileNumber(e.target.value)}
+              placeholder="A1234567"
+              className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm text-slate-300">
+              Date of Birth
+            </label>
+            <input
+              type="date"
+              value={passportDob}
+              onChange={(e) => setPassportDob(e.target.value)}
+              className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
+            />
+          </div>
+        </div>
+      );
+    }
+
     if (mode === "bank") {
       return (
         <div className="space-y-5">
@@ -225,17 +433,163 @@ export default function VerifyModal({
       );
     }
 
-    if (mode === "pan-udyam") {
+    if (mode === "digilocker") {
       return (
         <div className="space-y-5">
           <div>
             <label className="mb-2 block text-sm text-slate-300">
-              PAN Number (For UDYAM Lookup)
+              Documents to Request
             </label>
             <input
-              value={panValue}
-              onChange={(e) => setPanValue(e.target.value.toUpperCase())}
-              placeholder="ABCDE1234F"
+              value={documentRequested}
+              onChange={(e) => setDocumentRequested(e.target.value)}
+              placeholder="AADHAAR,PAN"
+              className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
+            />
+            <p className="mt-2 text-xs text-slate-500">
+              Comma separate document names, for example AADHAAR,PAN.
+            </p>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm text-slate-300">
+              User Flow
+            </label>
+            <select
+              value={userFlow}
+              onChange={(e) => setUserFlow(e.target.value)}
+              className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
+            >
+              <option value="signup">signup</option>
+              <option value="kyc_update">kyc_update</option>
+              <option value="kyc">kyc</option>
+            </select>
+          </div>
+        </div>
+      );
+    }
+
+    if (mode === "face-match") {
+      return (
+        <div className="space-y-5">
+          <div>
+            <label className="mb-2 block text-sm text-slate-300">
+              Reference Image 1
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setFaceImage1(e.target.files?.[0] ?? null)}
+              className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none file:mr-4 file:rounded-lg file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-white"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm text-slate-300">
+              Reference Image 2
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setFaceImage2(e.target.files?.[0] ?? null)}
+              className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none file:mr-4 file:rounded-lg file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-white"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    if (mode === "face-liveness") {
+      return (
+        <div className="space-y-5">
+          <div>
+            <label className="mb-2 block text-sm text-slate-300">
+              Image
+            </label>
+            <input
+              type="file"
+              accept="image/*"
+              onChange={(e) => setLivenessImage(e.target.files?.[0] ?? null)}
+              className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none file:mr-4 file:rounded-lg file:border-0 file:bg-blue-600 file:px-4 file:py-2 file:text-white"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    if (mode === "name-match") {
+      return (
+        <div className="space-y-5">
+          <div>
+            <label className="mb-2 block text-sm text-slate-300">
+              Name 1
+            </label>
+            <input
+              value={name1}
+              onChange={(e) => setName1(e.target.value)}
+              placeholder="John Doe"
+              className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm text-slate-300">
+              Name 2
+            </label>
+            <input
+              value={name2}
+              onChange={(e) => setName2(e.target.value)}
+              placeholder="Jon Doe"
+              className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
+            />
+          </div>
+        </div>
+      );
+    }
+
+    if (mode === "reverse-geocode") {
+      return (
+        <div className="space-y-5">
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <label className="mb-2 block text-sm text-slate-300">
+                Latitude
+              </label>
+              <input
+                value={latitude}
+                onChange={(e) => setLatitude(e.target.value)}
+                placeholder="23.0225"
+                className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
+              />
+            </div>
+
+            <div>
+              <label className="mb-2 block text-sm text-slate-300">
+                Longitude
+              </label>
+              <input
+                value={longitude}
+                onChange={(e) => setLongitude(e.target.value)}
+                placeholder="72.5714"
+                className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
+              />
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    if (mode === "employment-360") {
+      return (
+        <div className="space-y-5">
+          <div>
+            <label className="mb-2 block text-sm text-slate-300">
+              Mobile Number
+            </label>
+            <input
+              value={employmentPhone}
+              onChange={(e) => setEmploymentPhone(e.target.value)}
+              placeholder="9876543210"
               className="w-full rounded-xl border border-[#273647] bg-[#122131] px-4 py-3 text-white outline-none"
             />
           </div>
@@ -248,7 +602,7 @@ export default function VerifyModal({
 
   return createPortal(
     <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-md">
-      <div className="w-[880px] rounded-xl border border-[#273647] bg-[#0D1C2D] p-6">
+      <div className="max-h-[92vh] w-[980px] overflow-y-auto rounded-xl border border-[#273647] bg-[#0D1C2D] p-6">
         <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-semibold text-white">
@@ -259,7 +613,7 @@ export default function VerifyModal({
             </p>
           </div>
 
-          <button onClick={onClose}>
+          <button onClick={onClose} className="text-slate-300">
             <X />
           </button>
         </div>
@@ -273,14 +627,11 @@ export default function VerifyModal({
         )}
 
         {result && (
-          <div className="mt-5 rounded-xl border border-emerald-500/20 bg-emerald-500/5 p-4">
-            <div className="flex items-center gap-2 text-emerald-400">
-              <CheckCircle2 size={18} />
-              <span>Verification Successful</span>
-            </div>
-            <pre className="mt-4 overflow-auto rounded-xl bg-black/30 p-4 text-xs text-white">
-              {JSON.stringify(result, null, 2)}
-            </pre>
+          <div className="mt-6">
+            <VerificationResult
+              service={serviceName}
+              result={result}
+            />
           </div>
         )}
 

@@ -11,7 +11,18 @@ type ServiceCardProps = {
   price: number;
   icon: React.ReactNode;
   available: boolean;
-  mode: "single" | "driving-license" | "bank" | "pan-udyam" | "coming-soon";
+  mode:
+    | "single"
+    | "driving-license"
+    | "bank"
+    | "passport"
+    | "digilocker"
+    | "face-match"
+    | "face-liveness"
+    | "name-match"
+    | "reverse-geocode"
+    | "employment-360"
+    | "coming-soon";
   endpoint?: string;
   requestKey?: string;
   inputLabel?: string;

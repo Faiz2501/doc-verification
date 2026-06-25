@@ -8,8 +8,8 @@ import {
   formatDateTime,
   normalizeSupportStatus,
   supportStatusLabel,
-  supportStatusTone,
 } from "@/lib/staff/utils";
+
 type Props = {
   open: boolean;
   ticketId: string | null;
@@ -30,10 +30,8 @@ type Ticket = {
   userRole?: string;
 };
 
-const STATUS_OPTIONS = [
-  "OPEN",
-  "CLOSED",
-] as const;
+const STATUS_OPTIONS = ["OPEN", "CLOSED"] as const;
+
 function compactSupportStatus(status?: string | null) {
   const value = String(status ?? "").toUpperCase();
   return value === "CLOSED" || value === "RESOLVED" ? "CLOSED" : "OPEN";
@@ -48,6 +46,7 @@ function compactSupportStatusTone(status?: string | null) {
     ? "border-emerald-500/20 bg-emerald-500/10 text-emerald-300"
     : "border-blue-500/20 bg-blue-500/10 text-blue-300";
 }
+
 export default function SupportDrawer({
   open,
   ticketId,
@@ -55,7 +54,10 @@ export default function SupportDrawer({
   onSaved,
 }: Props) {
   const access = useStaffAccess(true);
-  const canManageSupport = access.hasPermission("MANAGE_SUPPORT");
+
+  const canManageSupport =
+    access.hasPermission("VIEW_SUPPORT") ||
+    access.hasPermission("MANAGE_SUPPORT");
 
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [loading, setLoading] = useState(false);
@@ -93,8 +95,15 @@ export default function SupportDrawer({
           status: String(payload.status ?? "OPEN"),
           createdAt: String(payload.createdAt ?? ""),
           reply: payload.reply ?? null,
-          customerName: payload.customerName,
-          customerEmail: payload.customerEmail,
+          customerName:
+            payload.customerName ||
+            [payload?.user?.firstName, payload?.user?.lastName]
+              .filter(Boolean)
+              .join(" ")
+              .trim() ||
+            payload?.user?.email ||
+            "Unnamed User",
+          customerEmail: payload.customerEmail || payload?.user?.email || "No email",
           userRole: payload.userRole,
         });
 
@@ -104,7 +113,7 @@ export default function SupportDrawer({
         setError(
           err?.response?.data?.message ||
             err?.message ||
-            "Failed to load ticket details.",
+            "Failed to load ticket details."
         );
       } finally {
         if (!cancelled) {
@@ -158,7 +167,7 @@ export default function SupportDrawer({
       setError(
         err?.response?.data?.message ||
           err?.message ||
-          "Failed to update ticket status.",
+          "Failed to update ticket status."
       );
     } finally {
       setSavingStatus(false);
@@ -179,13 +188,14 @@ export default function SupportDrawer({
       setError("");
 
       await api.patch(`/support/${ticketId}/reply`, {
-  reply: cleanReply,
-  status: "CLOSED",
-});
+        reply: cleanReply,
+        status: "CLOSED",
+      });
 
-setTicket((prev) =>
-  prev ? { ...prev, reply: cleanReply, status: "CLOSED" } : prev,
-);
+      setTicket((prev) =>
+        prev ? { ...prev, reply: cleanReply, status: "CLOSED" } : prev
+      );
+
       setReply(cleanReply);
       onSaved?.();
     } catch (err: any) {
@@ -193,7 +203,7 @@ setTicket((prev) =>
       setError(
         err?.response?.data?.message ||
           err?.message ||
-          "Failed to send reply.",
+          "Failed to send reply."
       );
     } finally {
       setSendingReply(false);
@@ -219,7 +229,7 @@ setTicket((prev) =>
       setError(
         err?.response?.data?.message ||
           err?.message ||
-          "Failed to delete ticket.",
+          "Failed to delete ticket."
       );
     } finally {
       setDeleting(false);
@@ -247,12 +257,12 @@ setTicket((prev) =>
 
             <div className="mt-3 flex flex-wrap items-center gap-3">
               <span
-  className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.16em] ${compactSupportStatusTone(
-    ticket?.status,
-  )}`}
->
-  {compactSupportStatusLabel(ticket?.status)}
-</span>
+                className={`rounded-full border px-3 py-1 text-xs uppercase tracking-[0.16em] ${compactSupportStatusTone(
+                  ticket?.status
+                )}`}
+              >
+                {compactSupportStatusLabel(ticket?.status)}
+              </span>
 
               <span className="text-sm text-slate-500">
                 ID {ticket?.id ? ticket.id.slice(0, 8) : "—"}
@@ -323,90 +333,94 @@ setTicket((prev) =>
             <section className="rounded-2xl border border-[var(--border)] bg-[#020d1b] p-5">
               <div className="flex items-center justify-between gap-3">
                 <h3 className="text-lg font-semibold text-white">Status</h3>
-                <span className="text-sm text-slate-400">Update ticket state</span>
+                <span className="text-sm text-slate-400">
+                  Update ticket state
+                </span>
               </div>
 
               <div className="mt-4 grid grid-cols-2 gap-3">
                 {STATUS_OPTIONS.map((status) => (
-  <button
-    key={status}
-    onClick={() => {
-      if (!canManageSupport) return;
-      void updateStatus(status);
-    }}
-    disabled={savingStatus || !canManageSupport}
-    className={`rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
-      !canManageSupport
-        ? "cursor-not-allowed border-slate-800 bg-slate-900 text-slate-500"
-        : normalizeSupportStatus(ticket?.status) === status
-        ? "border-blue-500 bg-blue-600 text-white"
-        : "border-slate-700 text-slate-300 hover:bg-[var(--hover-surface)]"
-    }`}
-  >
-    {supportStatusLabel(status)}
-  </button>
-))}
+                  <button
+                    key={status}
+                    onClick={() => {
+                      if (!canManageSupport) return;
+                      void updateStatus(status);
+                    }}
+                    disabled={savingStatus || !canManageSupport}
+                    className={`rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+                      !canManageSupport
+                        ? "cursor-not-allowed border-slate-800 bg-slate-900 text-slate-500"
+                        : normalizeSupportStatus(ticket?.status) === status
+                        ? "border-blue-500 bg-blue-600 text-white"
+                        : "border-slate-700 text-slate-300 hover:bg-[var(--hover-surface)]"
+                    }`}
+                  >
+                    {supportStatusLabel(status)}
+                  </button>
+                ))}
               </div>
             </section>
 
             <section className="rounded-2xl border border-[var(--border)] bg-[#020d1b] p-5">
               <div className="flex items-center justify-between gap-3">
                 <h3 className="text-lg font-semibold text-white">Reply</h3>
-                <span className="text-sm text-slate-400">Visible to the customer</span>
+                <span className="text-sm text-slate-400">
+                  Visible to the customer
+                </span>
               </div>
 
               <textarea
-  value={reply}
-  onChange={(e) => setReply(e.target.value)}
-  placeholder="Write a support reply..."
-  disabled={!canManageSupport}
-  className={`
-    mt-4
-    min-h-[150px]
-    w-full
-    rounded-2xl
-    border
-    p-4
-    outline-none
-    ${
-      canManageSupport
-        ? "border-slate-800 bg-[#020d1b] text-white"
-        : "cursor-not-allowed border-slate-800 bg-slate-900 text-slate-500"
-    }
-  `}
-/>
+                value={reply}
+                onChange={(e) => setReply(e.target.value)}
+                placeholder="Write a support reply..."
+                disabled={!canManageSupport}
+                className={`
+                  mt-4
+                  min-h-[150px]
+                  w-full
+                  rounded-2xl
+                  border
+                  p-4
+                  outline-none
+                  ${
+                    canManageSupport
+                      ? "border-slate-800 bg-[#020d1b] text-white"
+                      : "cursor-not-allowed border-slate-800 bg-slate-900 text-slate-500"
+                  }
+                `}
+              />
 
               <div className="mt-5 flex items-center justify-between gap-3">
                 <button
-  onClick={() => {
-    if (!canManageSupport) return;
-    void deleteTicket();
-  }}
-  disabled={deleting || !canManageSupport}
-  className={`inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
-    canManageSupport
-      ? "border-red-500/20 bg-red-500/5 text-red-300 hover:border-red-500/40 hover:bg-red-500/15"
-      : "cursor-not-allowed border-slate-800 bg-slate-900 text-slate-500"
-  }`}
->
-  <Trash2 size={16} />
-  Delete
-</button>
+                  onClick={() => {
+                    if (!canManageSupport) return;
+                    void deleteTicket();
+                  }}
+                  disabled={deleting || !canManageSupport}
+                  className={`inline-flex items-center gap-2 rounded-xl border px-4 py-3 text-sm font-medium transition-all ${
+                    canManageSupport
+                      ? "border-red-500/20 bg-red-500/5 text-red-300 hover:border-red-500/40 hover:bg-red-500/15"
+                      : "cursor-not-allowed border-slate-800 bg-slate-900 text-slate-500"
+                  }`}
+                >
+                  <Trash2 size={16} />
+                  Delete
+                </button>
 
                 <button
-  onClick={() => {
-    if (!canManageSupport) return;
-    void sendReply();
-  }}
-  disabled={sendingReply || !canManageSupport}
-  className={`rounded-xl px-5 py-3 text-sm font-medium transition-all ${
-    canManageSupport
-      ? "bg-blue-600 text-white hover:bg-blue-500"
-      : "cursor-not-allowed bg-slate-700 text-slate-400"
-  }`}
->
-  {sendingReply ? "Sending..." : "Send Reply"}
-</button>
+                  onClick={() => {
+                    if (!canManageSupport) return;
+                    void sendReply();
+                  }}
+                  disabled={sendingReply || !canManageSupport}
+                  className={`rounded-xl px-5 py-3 text-sm font-medium transition-all ${
+                    canManageSupport
+                      ? "bg-blue-600 text-white hover:bg-blue-500"
+                      : "cursor-not-allowed bg-slate-700 text-slate-400"
+                  }`}
+                >
+                  {sendingReply ? "Sending..." : "Send Reply"}
+                </button>
               </div>
             </section>
           </div>

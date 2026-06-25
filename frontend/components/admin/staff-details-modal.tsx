@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Loader2 } from "lucide-react";
 import api from "@/lib/api/axios";
+import { getRole } from "@/lib/auth/auth";
 
 type Props = {
   open: boolean;
@@ -34,13 +35,18 @@ type PermissionRecord = {
   createdAt?: string;
 };
 
-const fallbackPermissions = [
-  "MANAGE_STAFF",
+const visiblePermissions = [
   "VIEW_USERS",
   "VIEW_TRANSACTIONS",
   "VIEW_VERIFICATIONS",
-  "MANAGE_PRICING",
   "VIEW_SUPPORT",
+];
+
+const hiddenPermissions = [
+  "MANAGE_API_KEYS",
+  "MANAGE_PRICING",
+  "MANAGE_STAFF",
+  "REFUND_WALLET",
 ];
 
 function normalizeRole(role?: string | null) {
@@ -60,16 +66,35 @@ export default function StaffDetailsModal({
   onSaved,
 }: Props) {
   const [loading, setLoading] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [savingAccess, setSavingAccess] = useState(false);
+  const [savingWallet, setSavingWallet] = useState(false);
   const [error, setError] = useState("");
   const [user, setUser] = useState<UserDetails | null>(null);
-  const [availablePermissions, setAvailablePermissions] = useState<PermissionRecord[]>([]);
-  const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>([]);
+  const [availablePermissions, setAvailablePermissions] = useState<
+    PermissionRecord[]
+  >([]);
+  const [selectedPermissionIds, setSelectedPermissionIds] = useState<string[]>(
+    []
+  );
   const [role, setRole] = useState<"DEVELOPER" | "STAFF">("DEVELOPER");
+  const [walletBalanceInput, setWalletBalanceInput] = useState("");
+
+  const currentUserRole = useMemo(() => {
+    const role = getRole();
+    return (role ?? "developer").toLowerCase();
+  }, []);
+
+  const canEditWallet = currentUserRole === "admin";
 
   const walletBalance = useMemo(() => {
     if (!user) return 0;
-    return user.wallet?.balance ?? 0;
+    return Number(user.wallet?.balance ?? 0);
+  }, [user]);
+
+  useEffect(() => {
+    if (user) {
+      setWalletBalanceInput(String(Number(user.wallet?.balance ?? 0)));
+    }
   }, [user]);
 
   useEffect(() => {
@@ -88,13 +113,23 @@ export default function StaffDetailsModal({
 
         setUser(userData);
         setRole(normalizeRole(userData.role));
+        setWalletBalanceInput(String(Number(userData.wallet?.balance ?? 0)));
 
-        setAvailablePermissions(Array.isArray(permissionsData) ? permissionsData : []);
+        const filteredPermissions = (Array.isArray(permissionsData)
+          ? permissionsData
+          : []
+        ).filter((permission) => !hiddenPermissions.includes(permission.name));
+
+        setAvailablePermissions(filteredPermissions);
+
+        const allowedIds = new Set(filteredPermissions.map((p) => p.id));
 
         const assignedIds =
           userData.staffPermissions?.map((sp) => sp.permission.id) ?? [];
 
-        setSelectedPermissionIds(Array.from(new Set(assignedIds)));
+        setSelectedPermissionIds(
+          Array.from(new Set(assignedIds.filter((id) => allowedIds.has(id))))
+        );
       } catch (err: any) {
         console.error(err);
         setError(
@@ -124,11 +159,11 @@ export default function StaffDetailsModal({
     );
   };
 
-  const handleSave = async () => {
+  const handleSaveAccess = async () => {
     if (!userId || !user) return;
 
     try {
-      setSaving(true);
+      setSavingAccess(true);
       setError("");
 
       await api.patch(`/users/${userId}/role`, {
@@ -150,7 +185,67 @@ export default function StaffDetailsModal({
           "Failed to save access changes."
       );
     } finally {
-      setSaving(false);
+      setSavingAccess(false);
+    }
+  };
+
+  const handleSaveWallet = async () => {
+    if (!userId || !user) return;
+
+    if (!canEditWallet) {
+      setError("Only admin can edit wallet balance.");
+      return;
+    }
+
+    const nextBalance = Number(walletBalanceInput);
+
+    if (Number.isNaN(nextBalance) || nextBalance < 0) {
+      setError("Please enter a valid wallet balance.");
+      return;
+    }
+
+    const currentBalance = Number(user.wallet?.balance ?? 0);
+
+    if (nextBalance === currentBalance) {
+      setError("Wallet balance is already up to date.");
+      return;
+    }
+
+    try {
+      setSavingWallet(true);
+      setError("");
+
+      const difference = Math.abs(nextBalance - currentBalance);
+
+      if (nextBalance > currentBalance) {
+        await api.post("/wallet/credit", {
+          userId,
+          amount: difference,
+          description: "Admin wallet refund / adjustment",
+        });
+      } else {
+        await api.post("/wallet/debit", {
+          userId,
+          amount: difference,
+          description: "Admin wallet adjustment",
+        });
+      }
+
+      const updatedUserRes = await api.get(`/users/${userId}`);
+      const updatedUser = updatedUserRes.data as UserDetails;
+      setUser(updatedUser);
+      setWalletBalanceInput(String(Number(updatedUser.wallet?.balance ?? 0)));
+
+      await onSaved?.();
+    } catch (err: any) {
+      console.error(err);
+      setError(
+        err?.response?.data?.message ||
+          err?.message ||
+          "Failed to update wallet balance."
+      );
+    } finally {
+      setSavingWallet(false);
     }
   };
 
@@ -225,8 +320,47 @@ export default function StaffDetailsModal({
             <div>
               <p className="text-slate-500">Wallet Balance</p>
               <p className="mt-1 text-lg">
-                ₹{new Intl.NumberFormat("en-IN").format(Number(walletBalance || 0))}
+                ₹
+                {new Intl.NumberFormat("en-IN").format(
+                  Number(walletBalance || 0)
+                )}
               </p>
+
+              {canEditWallet ? (
+                <div className="mt-4 space-y-3">
+                  <label className="block">
+                    <span className="mb-2 block text-sm text-slate-500">
+                      Update Wallet Balance
+                    </span>
+                    <input
+                      type="number"
+                      min={0}
+                      step="1"
+                      value={walletBalanceInput}
+                      onChange={(e) => setWalletBalanceInput(e.target.value)}
+                      placeholder="Enter wallet balance"
+                      className="w-full rounded-xl border border-slate-800 bg-[#020d1b] p-4 text-white outline-none transition focus:border-blue-500"
+                    />
+                  </label>
+
+                  <button
+                    onClick={handleSaveWallet}
+                    disabled={savingWallet}
+                    className="rounded-xl bg-amber-500 px-5 py-3 font-medium text-black transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+                  >
+                    {savingWallet ? "Updating..." : "Save Wallet"}
+                  </button>
+
+                  <p className="text-sm text-slate-500">
+                    This will credit or debit the difference to match the exact
+                    balance you enter.
+                  </p>
+                </div>
+              ) : (
+                <p className="mt-3 text-sm text-slate-500">
+                  Wallet editing is available for admin only.
+                </p>
+              )}
             </div>
 
             <div>
@@ -235,7 +369,7 @@ export default function StaffDetailsModal({
               <div className="space-y-3">
                 {(availablePermissions.length
                   ? availablePermissions
-                  : fallbackPermissions.map((name) => ({ id: name, name }))).map(
+                  : visiblePermissions.map((name) => ({ id: name, name }))).map(
                   (permission) => (
                     <label
                       key={permission.id}
@@ -248,12 +382,15 @@ export default function StaffDetailsModal({
                         checked={selectedPermissionIds.includes(permission.id)}
                         onChange={() => togglePermission(permission.id)}
                         disabled={!isStaff}
-                        className={!isStaff ? 'cursor-not-allowed opacity-50' : ''}
+                        className={
+                          !isStaff ? "cursor-not-allowed opacity-50" : ""
+                        }
                       />
                     </label>
                   )
                 )}
               </div>
+
               {!isStaff && (
                 <p className="text-sm text-slate-500">
                   Permissions can only be assigned when the user is Staff.
@@ -270,11 +407,11 @@ export default function StaffDetailsModal({
               </button>
 
               <button
-                onClick={handleSave}
-                disabled={saving}
+                onClick={handleSaveAccess}
+                disabled={savingAccess}
                 className="rounded-xl bg-blue-600 px-5 py-3 text-white disabled:opacity-60"
               >
-                {saving ? "Saving..." : "Save Access"}
+                {savingAccess ? "Saving..." : "Save Access"}
               </button>
             </div>
           </div>
