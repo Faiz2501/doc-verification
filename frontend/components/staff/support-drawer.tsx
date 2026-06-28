@@ -236,12 +236,34 @@ export default function SupportDrawer({
     }
   };
 
+  useEffect(() => {
+  if (!open) return;
+
+  const handleEscape = (e: KeyboardEvent) => {
+    if (e.key === "Escape") {
+      onClose();
+    }
+  };
+
+  window.addEventListener("keydown", handleEscape);
+
+  return () => {
+    window.removeEventListener("keydown", handleEscape);
+  };
+}, [open, onClose]);
+
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[120] bg-black/55 backdrop-blur-sm">
-      <div className="absolute right-0 top-0 h-full w-full max-w-[680px] overflow-y-auto border-l border-[var(--border)] bg-[#08172b] p-8">
-        <div className="flex items-start justify-between gap-4">
+    <div
+  className="fixed inset-0 z-[120] bg-black/55 backdrop-blur-sm"
+  onClick={onClose}
+>
+  <div
+    className="absolute right-0 top-0 h-full w-full max-w-[680px] overflow-y-auto border-l border-[var(--border)] bg-[#08172b] p-8"
+    onClick={(e) => e.stopPropagation()}
+  >
+      <div className="flex items-start justify-between gap-4">
           <div>
             <p className="text-[11px] uppercase tracking-[0.22em] text-slate-500">
               Support Ticket

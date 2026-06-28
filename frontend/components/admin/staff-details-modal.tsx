@@ -145,6 +145,20 @@ export default function StaffDetailsModal({
     void load();
   }, [open, userId]);
 
+  useEffect(() => {
+  if (!open) return;
+
+  const handleEscape = (e: KeyboardEvent) => {
+    if (e.key === "Escape") onClose();
+  };
+
+  window.addEventListener("keydown", handleEscape);
+
+  return () => {
+    window.removeEventListener("keydown", handleEscape);
+  };
+}, [open, onClose]);
+
   if (!open) return null;
 
   const isStaff = role === "STAFF";
@@ -250,9 +264,15 @@ export default function StaffDetailsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] bg-black/50">
-      <div className="absolute right-0 top-0 h-full w-[500px] overflow-y-auto border-l border-slate-800 bg-[#08172b] p-8">
-        <div className="flex items-center justify-between">
+    <div
+  className="fixed inset-0 z-[100] bg-black/50"
+  onClick={onClose}
+>
+  <div
+    className="absolute right-0 top-0 h-full w-[500px] overflow-y-auto border-l border-slate-800 bg-[#08172b] p-8"
+    onClick={(e) => e.stopPropagation()}
+  >
+      <div className="flex items-center justify-between">
           <h2 className="text-2xl font-semibold">User Access</h2>
 
           <button onClick={onClose} className="text-slate-400">
@@ -346,7 +366,7 @@ export default function StaffDetailsModal({
                   <button
                     onClick={handleSaveWallet}
                     disabled={savingWallet}
-                    className="rounded-xl bg-amber-500 px-5 py-3 font-medium text-black transition hover:bg-amber-400 disabled:cursor-not-allowed disabled:opacity-60"
+                    className="rounded-xl bg-blue-600 px-5 py-3 font-medium text-white transition hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-60"
                   >
                     {savingWallet ? "Updating..." : "Save Wallet"}
                   </button>

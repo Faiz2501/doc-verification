@@ -8,6 +8,8 @@ import {
   Mail,
   Lock,
   ArrowRight,
+  Eye,
+  EyeOff,  Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
 
@@ -25,6 +27,9 @@ export default function RegisterForm() {
 
   const [password, setPassword] =
     useState("");
+
+  const [showPassword, setShowPassword] =
+  useState(false);  
 
   const [loading, setLoading] =
     useState(false);
@@ -100,17 +105,38 @@ export default function RegisterForm() {
         className="w-full rounded-xl border border-slate-800 bg-[#020d1b] p-4"
       />
 
-      <input
-        type="password"
-        placeholder="Password"
-        value={password}
-        onChange={(e) =>
-          setPassword(
-            e.target.value
-          )
-        }
-        className="w-full rounded-xl border border-slate-800 bg-[#020d1b] p-4"
-      />
+      <div className="relative">
+  <input
+    type={showPassword ? "text" : "password"}
+    placeholder="Password"
+    value={password}
+    onChange={(e) =>
+      setPassword(
+        e.target.value
+      )
+    }
+    className="w-full rounded-xl border border-slate-800 bg-[#020d1b] p-4 pr-12"
+  />
+
+  <button
+    type="button"
+    onClick={() =>
+      setShowPassword((prev) => !prev)
+    }
+    className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
+    aria-label={
+      showPassword
+        ? "Hide password"
+        : "Show password"
+    }
+  >
+    {showPassword ? (
+      <EyeOff size={18} />
+    ) : (
+      <Eye size={18} />
+    )}
+  </button>
+</div>
 
       {error && (
         <div className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-400">

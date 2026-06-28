@@ -1,6 +1,5 @@
 "use client";
 
-
 import { createPortal } from "react-dom";
 import { useEffect, useState } from "react";
 import { CheckCircle2, X } from "lucide-react";
@@ -78,6 +77,11 @@ export default function VerifyModal({
 
   useEffect(() => {
     if (!open) return;
+        const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") onClose();
+    };
+
+    window.addEventListener("keydown", handleEscape);
 
     setSingleValue("");
     setDlNumber("");
@@ -100,6 +104,10 @@ export default function VerifyModal({
     setEmploymentPhone("");
     setError("");
     setResult(null);
+
+        return () => {
+      window.removeEventListener("keydown", handleEscape);
+    };
   }, [open, defaultApiKey]);
 
   if (!open) return null;
@@ -297,11 +305,26 @@ export default function VerifyModal({
       setResult(response.data);
     } catch (err: any) {
       console.error(err);
-      setError(
-        err?.response?.data?.message ||
-          err?.message ||
-          "Verification failed."
-      );
+      const response = err?.response?.data;
+
+      const backendMessage =
+        response?.message || response?.error || err?.message || "";
+
+      const normalized = backendMessage.toLowerCase();
+
+      const insufficientBalance =
+        normalized.includes("insufficient") ||
+        normalized.includes("wallet balance") ||
+        normalized.includes("low balance") ||
+        normalized.includes("not enough balance");
+
+      if (insufficientBalance) {
+        setError(
+          "Insufficient wallet balance\nRecharge your wallet to continue."
+        );
+      } else {
+        setError(backendMessage || "Verification failed.");
+      }
     } finally {
       setLoading(false);
     }
@@ -601,9 +624,15 @@ export default function VerifyModal({
   };
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-md">
-      <div className="max-h-[92vh] w-[980px] overflow-y-auto rounded-xl border border-[#273647] bg-[#0D1C2D] p-6">
-        <div className="flex items-center justify-between">
+    <div
+  className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/70 backdrop-blur-md"
+  onClick={onClose}
+>
+  <div
+    className="max-h-[92vh] w-[980px] overflow-y-auto rounded-xl border border-[#273647] bg-[#0D1C2D] p-6"
+    onClick={(e) => e.stopPropagation()}
+  >
+      <div className="flex items-center justify-between">
           <div>
             <h2 className="text-2xl font-semibold text-white">
               {serviceName}
@@ -621,17 +650,26 @@ export default function VerifyModal({
         <div className="mt-6">{renderBody()}</div>
 
         {error && (
-          <div className="mt-5 rounded-xl border border-red-500/20 bg-red-500/10 p-4 text-sm text-red-300">
+          <div
+            className="
+              mt-5
+              whitespace-pre-line
+              rounded-xl
+              border
+              border-amber-500/20
+              bg-amber-500/10
+              p-4
+              text-sm
+              text-amber-300
+            "
+          >
             {error}
           </div>
         )}
 
         {result && (
           <div className="mt-6">
-            <VerificationResult
-              service={serviceName}
-              result={result}
-            />
+            <VerificationResult service={serviceName} result={result} />
           </div>
         )}
 

@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 
 interface Props {
   open: boolean;
@@ -20,6 +20,7 @@ export default function AddFundsModal({
 
   const [customAmount, setCustomAmount] =
     useState("");
+   
 
   const [loading, setLoading] =
     useState(false);
@@ -28,18 +29,28 @@ export default function AddFundsModal({
     useState("");
 
   const amount = useMemo(() => {
-    const custom = Number(customAmount);
+  const value = Number(customAmount);
 
-    if (
-      customAmount.trim() &&
-      !Number.isNaN(custom) &&
-      custom > 0
-    ) {
-      return custom;
-    }
+  if (!Number.isNaN(value) && value > 0) {
+    return value;
+  }
 
-    return selectedAmount;
-  }, [customAmount, selectedAmount]);
+  return selectedAmount;
+}, [customAmount, selectedAmount]);
+
+useEffect(() => {
+  if (!open) return;
+
+  const handleEscape = (e: KeyboardEvent) => {
+    if (e.key === "Escape") onClose();
+  };
+
+  window.addEventListener("keydown", handleEscape);
+
+  return () => {
+    window.removeEventListener("keydown", handleEscape);
+  };
+}, [open, onClose]);
 
   if (!open) return null;
 
@@ -62,9 +73,15 @@ export default function AddFundsModal({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
-      <div className="w-[520px] rounded-xl border border-slate-800 bg-[#081a2e] p-6">
-        <h2 className="text-2xl font-semibold">
+    <div
+  className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm"
+  onClick={onClose}
+>
+  <div
+    className="w-[520px] rounded-xl border border-slate-800 bg-[#081a2e] p-6"
+    onClick={(e) => e.stopPropagation()}
+  >
+      <h2 className="text-2xl font-semibold">
           Add Funds
         </h2>
 
@@ -93,10 +110,10 @@ export default function AddFundsModal({
             <button
               key={value}
               onClick={() => {
-                setSelectedAmount(value);
-                setCustomAmount("");
-                setError("");
-              }}
+  setSelectedAmount(value);
+  setCustomAmount(String(value));
+  setError("");
+}}
               className={`
                 rounded-sm
                 border

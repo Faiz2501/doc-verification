@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import RotateKeyModal from "@/components/apikeys/rotate-key-modal";
 import ApiKeyCard from "@/components/apikeys/api-key-card";
 import WalletBalance from "@/components/wallet/wallet-balance";
@@ -88,6 +89,8 @@ declare global {
 }
 
 export default function ApiKeysPage() {
+    const router = useRouter();
+  const searchParams = useSearchParams();
   const [userId, setUserId] = useState("");
   const [apiKeys, setApiKeys] = useState<ApiKey[]>([]);
   const [wallet, setWallet] = useState<WalletData | null>(null);
@@ -178,7 +181,14 @@ export default function ApiKeysPage() {
       }
     })();
   }, []);
+  useEffect(() => {
+    if (loading) return;
 
+    if (searchParams.get("recharge") === "1") {
+      setAddFundsOpen(true);
+      router.replace("/developer/api-keys");
+    }
+  }, [loading, searchParams, router]);
   const handleGenerateKey = async (name: string) => {
     if (!userId) return;
     try {
@@ -426,7 +436,7 @@ export default function ApiKeysPage() {
         )}
       </div>
 
-      <div className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-4">
+      <div id="wallet-section" className="mt-6 grid grid-cols-1 gap-4 xl:grid-cols-4">
         <div className="col-span-1 xl:col-span-2">
           <WalletBalance
             balance={wallet?.balance ?? 0}
@@ -443,9 +453,9 @@ export default function ApiKeysPage() {
         </div>
       </div>
 
-      <div className="mt-6">
-        <TransactionsTable rows={walletRows} />
-      </div>
+      <div id="wallet-transactions" className="mt-6">
+  <TransactionsTable rows={walletRows} />
+</div>
 
       <GenerateKeyModal
         open={generateOpen}

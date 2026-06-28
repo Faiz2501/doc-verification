@@ -6,6 +6,8 @@ import {
   Mail,
   Lock,
   ArrowRight,
+  Eye,
+  EyeOff,
   Loader2,
 } from "lucide-react";
 import { useRouter } from "next/navigation";
@@ -21,6 +23,7 @@ export default function LoginForm() {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
@@ -122,26 +125,35 @@ export default function LoginForm() {
         </div>
 
         <div
-          className={`
-            flex items-center gap-3 rounded-xl border px-4 py-4 bg-[#020d1b]
-            ${
-              error ? "border-red-500" : "border-slate-800"
-            }
-          `}
-        >
-          <Lock
-            size={18}
-            className="text-slate-500"
-          />
+  className={`
+    flex items-center gap-3 rounded-xl border px-4 py-4 bg-[#020d1b]
+    ${
+      error ? "border-red-500" : "border-slate-800"
+    }
+  `}
+>
+  <Lock
+    size={18}
+    className="text-slate-500"
+  />
 
-          <input
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            type="password"
-            placeholder="••••••••"
-            className="w-full bg-transparent outline-none placeholder:text-slate-600 text-white"
-          />
-        </div>
+  <input
+    value={password}
+    onChange={(e) => setPassword(e.target.value)}
+    type={showPassword ? "text" : "password"}
+    placeholder="••••••••"
+    className="w-full bg-transparent outline-none placeholder:text-slate-600 text-white"
+  />
+
+  <button
+    type="button"
+    onClick={() => setShowPassword((prev) => !prev)}
+    className="text-slate-500 hover:text-slate-300"
+    aria-label={showPassword ? "Hide password" : "Show password"}
+  >
+    {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+  </button>
+</div>
       </div>
 
       {error && (
