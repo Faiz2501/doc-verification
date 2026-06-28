@@ -11,12 +11,14 @@ import { PrismaService } from '../prisma/prisma.service';
 import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
 import { ChangePasswordDto } from './dto/change-password.dto';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class AuthService {
   constructor(
     private prisma: PrismaService,
     private jwtService: JwtService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async register(dto: RegisterDto) {
@@ -38,6 +40,13 @@ export class AuthService {
         lastName: dto.lastName,
       },
     });
+
+    this.notificationsService.create(
+      user.id,
+      'WELCOME',
+      'Welcome aboard!',
+      `Your account has been created successfully. Start exploring the platform.`,
+    );
 
     return {
       message: 'User registered successfully',
@@ -117,20 +126,13 @@ export class AuthService {
       throw new UnauthorizedException('Invalid refresh token');
     }
   }
-  async changePassword(
-    userId: string,
-    dto: ChangePasswordDto,
-  ) {
+  async changePassword(userId: string, dto: ChangePasswordDto) {
     const user = await this.prisma.user.findUnique({
-      where: {
-        id: userId,
-      },
+      where: { id: userId },
     });
 
     if (!user) {
-      throw new UnauthorizedException(
-        'User not found',
-      );
+      throw new BadRequestException('User not found');
     }
 
     const passwordMatches = await bcrypt.compare(
@@ -139,39 +141,16 @@ export class AuthService {
     );
 
     if (!passwordMatches) {
-      throw new BadRequestException(
-       'Current password is incorrect',
-      );
+      throw new BadRequestException('Current password is incorrect');
     }
 
-    if (dto.newPassword.trim().length < 6) {
-      throw new BadRequestException(
-        'Password must be at least 6 characters long',
-      );
-    }
-
-    if (dto.currentPassword === dto.newPassword) {
-      throw new BadRequestException(
-        'New password must be different from the current password',
-      );
-    }
- 
-    const hashedPassword = await bcrypt.hash(
-      dto.newPassword,
-      10,
-    );
+    const hashedPassword = await bcrypt.hash(dto.newPassword, 10);
 
     await this.prisma.user.update({
-      where: {
-        id: userId,
-      },
-      data: {
-        password: hashedPassword,
-      },
+      where: { id: userId },
+      data: { password: hashedPassword },
     });
 
-    return {
-      message: 'Password updated successfully',
-    };
+    return { message: 'Password changed successfully' };
   }
 }

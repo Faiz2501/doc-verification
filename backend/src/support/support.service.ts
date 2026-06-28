@@ -4,11 +4,13 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class SupportService {
   constructor(
     private prisma: PrismaService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async createTicket(data: {
@@ -16,7 +18,7 @@ export class SupportService {
     subject: string;
     message: string;
   }) {
-    return this.prisma.supportTicket.create({
+    const ticket = await this.prisma.supportTicket.create({
       data: {
         userId: data.userId,
         subject: data.subject,
@@ -24,22 +26,22 @@ export class SupportService {
         status: 'OPEN',
       },
     });
+
+    this.notificationsService.create(
+      data.userId,
+      'TICKET_RAISED',
+      'Ticket Submitted',
+      `Your ticket "${data.subject}" has been raised and sent to our team.`,
+      { ticketId: ticket.id, subject: data.subject },
+    );
+
+    return ticket;
   }
 
   async getUserTickets(userId: string) {
     return this.prisma.supportTicket.findMany({
       where: {
         userId,
-      },
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
       },
       orderBy: {
         createdAt: 'desc',
@@ -49,16 +51,6 @@ export class SupportService {
 
   async getAllTickets() {
     return this.prisma.supportTicket.findMany({
-      include: {
-        user: {
-          select: {
-            id: true,
-            firstName: true,
-            lastName: true,
-            email: true,
-          },
-        },
-      },
       orderBy: {
         createdAt: 'desc',
       },
@@ -70,16 +62,6 @@ export class SupportService {
       await this.prisma.supportTicket.findUnique({
         where: {
           id: ticketId,
-        },
-        include: {
-          user: {
-            select: {
-              id: true,
-              firstName: true,
-              lastName: true,
-              email: true,
-            },
-          },
         },
       });
 
@@ -109,7 +91,7 @@ export class SupportService {
       );
     }
 
-    return this.prisma.supportTicket.update({
+    const updated = await this.prisma.supportTicket.update({
       where: {
         id: ticketId,
       },
@@ -117,6 +99,18 @@ export class SupportService {
         status,
       },
     });
+
+    if (status === 'RESOLVED') {
+      this.notificationsService.create(
+        ticket.userId,
+        'TICKET_RESOLVED',
+        'Ticket Resolved',
+        `Your ticket "${ticket.subject}" has been marked as resolved.`,
+        { ticketId, subject: ticket.subject },
+      );
+    }
+
+    return updated;
   }
 
   async replyToTicket(
@@ -137,7 +131,7 @@ export class SupportService {
       );
     }
 
-    return this.prisma.supportTicket.update({
+    const updated = await this.prisma.supportTicket.update({
       where: {
         id: ticketId,
       },
@@ -146,6 +140,26 @@ export class SupportService {
         status,
       },
     });
+
+    this.notificationsService.create(
+      ticket.userId,
+      'TICKET_REPLIED',
+      'Ticket Responded',
+      `A staff member has responded to your ticket "${ticket.subject}".`,
+      { ticketId, subject: ticket.subject },
+    );
+
+    if (status === 'RESOLVED') {
+      this.notificationsService.create(
+        ticket.userId,
+        'TICKET_RESOLVED',
+        'Ticket Resolved',
+        `Your ticket "${ticket.subject}" has been marked as resolved.`,
+        { ticketId, subject: ticket.subject },
+      );
+    }
+
+    return updated;
   }
 
   async deleteTicket(ticketId: string) {

@@ -4,11 +4,13 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 @Injectable()
 export class WalletService {
   constructor(
     private prisma: PrismaService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async getWallet(userId: string) {
@@ -60,6 +62,14 @@ export class WalletService {
       },
     });
 
+    this.notificationsService.create(
+      userId,
+      'WALLET_CREDITED',
+      'Wallet Credited',
+      `₹${amount} has been added to your wallet. ${description}`,
+      { amount, description },
+    );
+
     return updatedWallet;
   }
 
@@ -97,6 +107,14 @@ export class WalletService {
         description,
       },
     });
+
+    this.notificationsService.create(
+      userId,
+      'WALLET_DEBITED',
+      'Wallet Debited',
+      `₹${amount} has been deducted from your wallet. ${description}`,
+      { amount, description },
+    );
 
     return updatedWallet;
   }

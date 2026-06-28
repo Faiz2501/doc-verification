@@ -4,6 +4,7 @@ import {
 } from '@nestjs/common';
 
 import { PrismaService } from '../prisma/prisma.service';
+import { NotificationsService } from '../notifications/notifications.service';
 
 import * as bcrypt from 'bcrypt';
 
@@ -11,6 +12,7 @@ import * as bcrypt from 'bcrypt';
 export class StaffService {
   constructor(
     private prisma: PrismaService,
+    private notificationsService: NotificationsService,
   ) {}
 
   async createStaff(data: {
@@ -86,13 +88,21 @@ export class StaffService {
     });
 
     if (!permissionIds.length) {
+      this.notificationsService.create(
+        userId,
+        'PERMISSIONS_UPDATED',
+        'Permissions Updated',
+        'Your account permissions have been cleared by an administrator.',
+        { permissionIds: [] },
+      );
+
       return {
         message:
           'Permissions cleared successfully',
       };
     }
 
-    return this.prisma.staffPermission.createMany({
+    const result = await this.prisma.staffPermission.createMany({
       data: permissionIds.map(
         (permissionId) => ({
           userId,
@@ -100,6 +110,16 @@ export class StaffService {
         }),
       ),
     });
+
+    this.notificationsService.create(
+      userId,
+      'PERMISSIONS_UPDATED',
+      'Permissions Updated',
+      'Your account permissions have been updated by an administrator.',
+      { permissionIds },
+    );
+
+    return result;
   }
 
   async getStaffPermissions() {

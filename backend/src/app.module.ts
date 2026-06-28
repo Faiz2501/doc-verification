@@ -27,6 +27,7 @@ import { DashboardModule } from './dashboard/dashboard.module';
 import { AdminModule } from './admin/admin.module';
 import { WebhooksModule } from './webhooks/webhooks.module';
 import { HealthModule } from './health/health.module';
+import { NotificationsModule } from './notifications/notifications.module';
 
 @Module({
   imports: [
@@ -58,6 +59,7 @@ import { HealthModule } from './health/health.module';
     AdminModule,
     WebhooksModule,
     HealthModule,
+    NotificationsModule,
   ],
 
   providers: [
