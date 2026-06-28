@@ -83,7 +83,7 @@ export class WalletService {
 
     if (wallet.balance < amount) {
       throw new BadRequestException(
-        'Insufficient wallet balance',
+        'Insufficient wallet balance, please recharge',
       );
     }
 

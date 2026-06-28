@@ -11,6 +11,25 @@ import { ApiKeysService } from '../api-keys/api-keys.service';
 
 import { firstValueFrom } from 'rxjs';
 
+function getProviderErrorMessage(error: any): string {
+  const rawMessage =
+    error?.response?.data?.message ??
+    error?.response?.data?.error ??
+    error?.response?.data?.detail ??
+    error?.message ??
+    'Verification failed.';
+
+  if (Array.isArray(rawMessage)) {
+    return rawMessage.join(', ');
+  }
+
+  if (typeof rawMessage === 'object' && rawMessage !== null) {
+    return JSON.stringify(rawMessage);
+  }
+
+  return String(rawMessage);
+}
+
 @Injectable()
 export class VerificationsService {
   constructor(
@@ -26,32 +45,42 @@ export class VerificationsService {
     endpoint: string,
     payload: any,
   ) {
-    const key =
-      await this.apiKeysService.validateApiKey(
-        apiKey,
-      );
+    const key = await this.apiKeysService.validateApiKey(apiKey);
 
     if (!key) {
-      throw new UnauthorizedException(
-        'Invalid API Key',
-      );
+      throw new UnauthorizedException('Invalid API Key');
     }
 
     console.log('SERVICE:', serviceName);
     console.log('ENDPOINT:', endpoint);
 
-    const pricing =
-      await this.prisma.pricing.findUnique({
-        where: {
-          serviceName,
-        },
-      });
+    const pricing = await this.prisma.pricing.findUnique({
+      where: {
+        serviceName,
+      },
+    });
 
     console.log('PRICING:', pricing);
 
     if (!pricing) {
+      throw new BadRequestException('Pricing not configured');
+    }
+
+    const wallet = await this.prisma.wallet.findFirst({
+      where: {
+        userId: key.userId,
+      },
+      select: {
+        balance: true,
+      },
+    });
+
+    const walletBalance = Number(wallet?.balance ?? 0);
+    const servicePrice = Number(pricing.price);
+
+    if (walletBalance < servicePrice) {
       throw new BadRequestException(
-        'Pricing not configured',
+        'Insufficient balance. Please recharge your wallet.',
       );
     }
 
@@ -63,28 +92,23 @@ export class VerificationsService {
 
       console.log('PAYLOAD:', payload);
 
-      const response =
-        await firstValueFrom(
-          this.http.post(
-            `${process.env.NEROTIX_BASE_URL}${endpoint}`,
-            payload,
-            {
-              headers: {
-                Authorization:
-                  `Bearer ${process.env.NEROTIX_TOKEN}`,
-              },
+      const response = await firstValueFrom(
+        this.http.post(
+          `${process.env.NEROTIX_BASE_URL}${endpoint}`,
+          payload,
+          {
+            headers: {
+              Authorization: `Bearer ${process.env.NEROTIX_TOKEN}`,
             },
-          ),
-        );
-
-      console.log(
-        'NEROTIX SUCCESS:',
-        response.data,
+          },
+        ),
       );
+
+      console.log('NEROTIX SUCCESS:', response.data);
 
       await this.walletService.debitWallet(
         key.userId,
-        pricing.price,
+        servicePrice,
         `${serviceName} Verification`,
       );
 
@@ -92,7 +116,7 @@ export class VerificationsService {
         data: {
           userId: key.userId,
           serviceName,
-          amount: pricing.price,
+          amount: servicePrice,
           status: 'SUCCESS',
           requestData: payload,
           responseData: response.data,
@@ -101,47 +125,37 @@ export class VerificationsService {
 
       return response.data;
     } catch (error: any) {
-      console.log(
-        '========== NEROTIX ERROR ==========',
-      );
-      console.log(
-        'SERVICE:',
-        serviceName,
-      );
-      console.log(
-        'ENDPOINT:',
-        endpoint,
-      );
-      console.log(
-        'STATUS:',
-        error?.response?.status,
-      );
-      console.log(
-        'RESPONSE:',
-        error?.response?.data,
-      );
-      console.log(
-        'MESSAGE:',
-        error?.message,
-      );
-      console.log(
-        '===================================',
-      );
+      console.log('========== NEROTIX ERROR ==========');
+      console.log('SERVICE:', serviceName);
+      console.log('ENDPOINT:', endpoint);
+      console.log('STATUS:', error?.response?.status);
+      console.log('RESPONSE:', error?.response?.data);
+      console.log('MESSAGE:', error?.message);
+      console.log('===================================');
+
+      const providerMessage = getProviderErrorMessage(error);
 
       await this.prisma.verificationRequest.create({
         data: {
           userId: key.userId,
           serviceName,
-          amount: pricing.price,
+          amount: servicePrice,
           status: 'FAILED',
           requestData: payload,
-          responseData:
-            error?.response?.data || {},
-          errorMessage:
-            error?.response?.data?.message ||
-            error.message,
+          responseData: error?.response?.data || {},
+          errorMessage: providerMessage,
         },
       });
+
+      const status = error?.response?.status;
+
+      if (status === 401 || status === 403) {
+        throw new UnauthorizedException(providerMessage);
+      }
+
+      if (status && status >= 400 && status < 500) {
+        throw new BadRequestException(providerMessage);
+      }
 
       throw error;
     }

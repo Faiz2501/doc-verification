@@ -108,11 +108,10 @@ model SupportTicket {
   userId    String
   subject   String
   message   String
-  reply     String?
   status    String
   createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  reply     String?
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 model Notification {
@@ -124,8 +123,7 @@ model Notification {
   isRead    Boolean  @default(false)
   metadata  Json?
   createdAt DateTime @default(now())
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 }
 
 enum Role {
