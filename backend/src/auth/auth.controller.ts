@@ -1,25 +1,21 @@
 import {
   Body,
   Controller,
-  Get,
-  Patch,
   Post,
-  Req,
-  UseGuards,
+  Get,
 } from '@nestjs/common';
 
 import { AuthService } from './auth.service';
 
-import { RegisterDto } from './dto/register.dto';
 import { LoginDto } from './dto/login.dto';
-import { ChangePasswordDto } from './dto/change-password.dto';
-
-import { JwtAuthGuard } from './guards/jwt-auth.guard';
+import { StartRegistrationDto } from './dto/start-registration.dto';
+import { CompleteRegistrationDto } from './dto/complete-registration.dto';
+import { ResendRegistrationOtpDto } from './dto/resend-registration-otp.dto';
 
 @Controller('auth')
 export class AuthController {
   constructor(
-    private readonly authService: AuthService,
+    private authService: AuthService,
   ) {}
 
   @Get('test')
@@ -29,9 +25,23 @@ export class AuthController {
     };
   }
 
+  @Post('register/start')
+  sendRegistrationOtp(
+    @Body() dto: StartRegistrationDto,
+  ) {
+    return this.authService.startRegistration(dto);
+  }
+
+  @Post('register/resend')
+  resendRegistrationOtp(
+    @Body() dto: ResendRegistrationOtpDto,
+  ) {
+    return this.authService.resendRegistrationOtp(dto);
+  }
+
   @Post('register')
   register(
-    @Body() dto: RegisterDto,
+    @Body() dto: CompleteRegistrationDto,
   ) {
     return this.authService.register(dto);
   }
@@ -52,18 +62,6 @@ export class AuthController {
   ) {
     return this.authService.refreshToken(
       body.refresh_token,
-    );
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Patch('change-password')
-  changePassword(
-    @Req() req,
-    @Body() dto: ChangePasswordDto,
-  ) {
-    return this.authService.changePassword(
-      req.user.sub,
-      dto,
     );
   }
 }

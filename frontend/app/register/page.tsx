@@ -61,7 +61,7 @@ export default function RegisterPage() {
               </h2>
 
               <p className="mt-3 text-slate-400">
-                Create your developer account.
+                Create your account.
               </p>
             </div>
 
