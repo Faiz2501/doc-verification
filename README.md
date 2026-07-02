@@ -71,6 +71,27 @@ Staff members receive role-based permissions to perform only the tasks assigned 
 * Secure Password Hashing
 * Change Password
 * Role Based Authentication
+* Email OTP Verification for Registration
+
+### Registration Verification Flow
+
+Registration is protected using email OTP verification to reduce fake or bot accounts.
+
+Flow:
+
+1. User enters:
+   * First Name
+   * Last Name
+   * Email
+   * Password
+
+2. Backend sends an OTP to the user’s email using SMTP + Nodemailer
+
+3. User enters the OTP
+
+4. Backend validates the OTP
+
+5. User account is created only after successful OTP verification
 
 ---
 
@@ -362,7 +383,7 @@ Every verification stores:
 
 ---
 
-# Developer API 
+# Developer API
 
 Users can immediately integrate the APIs into their own applications using their own API key.
 
@@ -403,6 +424,7 @@ Hosted on:
 
 * JWT
 * bcrypt
+* SMTP + Nodemailer for Email OTP Registration
 
 ---
 
@@ -430,7 +452,6 @@ Hosted on:
 
 # Project Structure
 
-```
 saas-project
 │
 ├── frontend
@@ -462,7 +483,6 @@ saas-project
 │
 ├── README.md
 └── .gitignore
-```
 
 ---
 
@@ -486,7 +506,7 @@ Install the following before running the project.
 git clone https://github.com/Faiz2501/saas-project.git
 
 cd saas-project
-```
+````
 
 ---
 
@@ -532,6 +552,12 @@ RAZORPAY_KEY_ID=your_key
 RAZORPAY_KEY_SECRET=your_secret
 
 RAZORPAY_WEBHOOK_SECRET=your_webhook_secret
+
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USER=your_email@gmail.com
+SMTP_PASS=your_google_app_password
+SMTP_FROM="IDProofPro <your_email@gmail.com>"
 ```
 
 ---
@@ -687,6 +713,7 @@ After starting both servers:
 
 * Authentication System
 * JWT Authentication
+* Email OTP Registration
 * Change Password
 * Role-Based Access Control (RBAC)
 * Staff Permission Management
@@ -758,6 +785,15 @@ Ensure the backend is running before starting the frontend.
 * Generate an API key from the customer dashboard.
 * Ensure the API key is active.
 * Verify the key is being passed in the `x-api-key` header.
+
+---
+
+### Registration OTP Not Coming
+
+* Check SMTP credentials in `.env`
+* Make sure `SMTP_USER` and `SMTP_PASS` are correct
+* If using Gmail, use an App Password instead of your normal password
+* Check spam/junk folder
 
 ---
 
