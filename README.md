@@ -451,7 +451,7 @@ Hosted on:
 ---
 
 # Project Structure
-
+```
 saas-project
 │
 ├── frontend
@@ -483,7 +483,7 @@ saas-project
 │
 ├── README.md
 └── .gitignore
-
+```
 ---
 
 # Prerequisites
